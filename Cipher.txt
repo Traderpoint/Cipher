@@ -1,0 +1,5 @@
+Cipher
+
+Spusteni
+
+node dist/src/app/index.cjs --mode api --port 3000
