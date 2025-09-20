@@ -112,6 +112,26 @@ curl -X POST http://localhost:3000/api/sessions -H "Content-Type: application/js
 ```
 
 If the API cannot reach PostgreSQL, the server log shows `Failed to connect to database backend`. Fix the credentials/service and rerun the commands above.
+### Web UI mode
+
+```powershell
+# Build API + UI assets (includes standalone Next.js bundle)
+pnpm run build
+
+# Windows: preserve the Next.js bundle
+FORCE_STANDALONE=true pnpm run build-ui
+
+# Copy the UI build where the runtime expects it
+Copy-Item "dist/src/app/ui" "dist/src/ui" -Recurse -Force
+
+# Launch combined API + UI servers
+default: api on 3001, ui on 3000
+node dist/src/app/index.cjs --mode ui --port 3001 --ui-port 3000
+```
+
+> **Tip:** Spouštěj z PowerShellu s administrátorskými právy (nebo s aktivním Developer Mode), aby PNPM/Next.js mohly bezpečně vytvářet symlinky.
+
+Po startu navštiv `http://localhost:3000` (UI) a `http://localhost:3001/health` (API) pro kontrolu. Při testování přes `curl` můžeš používat ty samé endpointy jako v API režimu (`/api/sessions`, `/api/message/sync`, `ws://localhost:3001/ws`).
 ### CLI Usage 💻
 
 <details>
