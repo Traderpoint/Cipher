@@ -31,7 +31,7 @@
 		"memAgent/cipher.yml"
 	],
 	"scripts": {
-		"clean": "rm -rf dist",
+		"clean": "rimraf dist",
 		"prebuild": "pnpm run clean",
 		"build": "pnpm run build-ui && tsup && pnpm run copy-ui-dist",
 		"build:no-ui": "tsup && pnpm run copy-ui-dist",
@@ -90,6 +90,7 @@
 		"ts-node": "^10.9.2",
 		"tsup": "^8.5.0",
 		"tsx": "^4.19.2",
+		"rimraf": "^6.0.1",
 		"typescript": "^5.8.3",
 		"vitest": "^3.2.4",
 		"zod": "^3.25.76"

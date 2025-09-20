@@ -1,0 +1,4 @@
+{
+  "message": "Hello! I'm testing the PostgreSQL integration with Cipher. Can you tell me about artificial intelligence and also confirm that our conversation is being stored in PostgreSQL database?",
+  "sessionId": "postgres-integration-test-001"
+}

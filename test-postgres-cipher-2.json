@@ -1,0 +1,4 @@
+{
+  "message": "Great! Can you remember what I asked you about in my previous message? This will test if the PostgreSQL session storage is working correctly.",
+  "sessionId": "postgres-integration-test-001"
+}

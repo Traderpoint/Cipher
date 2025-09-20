@@ -1,0 +1,4 @@
+{
+  "message": "Hello! Test PostgreSQL integration with Gemini AI. Can you confirm that you're working with PostgreSQL database?",
+  "sessionId": "postgres-test-session-001"
+}

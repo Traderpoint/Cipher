@@ -40,9 +40,9 @@ llm:
   # qwenOptions:
   #   enableThinking: false
 
-  provider: deepseek
-  model: deepseek-chat
-  apiKey: $DEEPSEEK_API_KEY
+  provider: gemini
+  model: gemini-2.0-flash
+  apiKey: $GEMINI_API_KEY
   maxIterations: 50
   
 
@@ -82,9 +82,9 @@ llm:
 OpenAI:
 
 embedding:
-  type: openai
-  model: text-embedding-3-small
-  apiKey: $OPENAI_API_KEY
+  type: gemini
+  model: gemini-embedding-001
+  apiKey: $GEMINI_API_KEY
 
   # type: ollama
   # model: mxbai-embed-large
