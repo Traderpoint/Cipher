@@ -80,6 +80,22 @@ Cipher will automatically create the necessary tables and indexes on first run:
 - `messages` - Chat messages and history
 - Indexes for optimal query performance
 
+### Verify the connection
+
+Once the `.env` values are in place, spin up the API (`node dist/src/app/index.cjs --mode api --port 3000`) and run the following from a PowerShell prompt. Each command runs non-interactively so that automation can surface problems immediately:
+
+```powershell
+# API health probe
+curl http://localhost:3000/health
+
+# Session metadata requires a live PostgreSQL connection
+curl -X GET http://localhost:3000/api/sessions
+
+# Direct PostgreSQL check – password is embedded to avoid prompts
+"C:/Program Files/PostgreSQL/17/bin/psql.exe" "postgresql://postgres:<password>@localhost:5432/cipher_db" -c "SELECT COUNT(*) FROM sessions;"
+```
+
+If any call fails, inspect the server window for `Failed to connect to database backend` and verify the service credentials.
 ### Cloud PostgreSQL Services
 
 **Heroku Postgres:**

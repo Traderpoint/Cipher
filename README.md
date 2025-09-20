@@ -83,6 +83,35 @@ curl http://localhost:3000/health
 pnpm i && pnpm run build && npm link
 ```
 
+### Run the API server locally
+
+```bash
+# Build the distribution artifacts
+pnpm run build
+
+# Windows only: keep standalone UI assets when building
+FORCE_STANDALONE=true pnpm run build-ui
+
+# Start the API server on port 3000
+node dist/src/app/index.cjs --mode api --port 3000
+```
+
+> **Note:** On Windows, run the build/start commands from an elevated PowerShell or enable Developer Mode so PNPM can create the symlinks Next.js expects.
+
+Verify the deployment:
+
+```powershell
+# Health endpoint
+curl http://localhost:3000/health
+
+# Create a session (persists in PostgreSQL if configured)
+curl -X POST http://localhost:3000/api/sessions -H "Content-Type: application/json" -d '{"sessionId":"api-test"}'
+
+# Direct PostgreSQL check (inline password avoids prompts)
+"C:/Program Files/PostgreSQL/17/bin/psql.exe" "postgresql://postgres:<password>@localhost:5432/cipher_db" -c "SELECT NOW();"
+```
+
+If the API cannot reach PostgreSQL, the server log shows `Failed to connect to database backend`. Fix the credentials/service and rerun the commands above.
 ### CLI Usage 💻
 
 <details>
