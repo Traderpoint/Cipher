@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { MemAgent } from '@core/index.js';
 import { EnhancedPromptManager } from '@core/brain/systemPrompt/enhanced-manager.js';
+import { getTokenTracker } from './token-stats-display.js';
 
 /**
  * Interface for command execution results
@@ -93,8 +94,8 @@ export class CommandParser {
 			const commandDef =
 				this.commands.get(command) || this.commands.get(this.aliases.get(command) || '');
 			if (!commandDef) {
-				console.log(chalk.red(`❌ Unknown command: /${command}`));
-				console.log(chalk.gray('💡 Use /help to see all available commands'));
+				console.log(chalk.red(` Unknown command: /${command}`));
+				console.log(chalk.gray(' Use /help to see all available commands'));
 				return false;
 			}
 
@@ -117,7 +118,7 @@ export class CommandParser {
 		} catch (error) {
 			console.log(
 				chalk.red(
-					`❌ Error executing command /${command}: ${error instanceof Error ? error.message : String(error)}`
+					` Error executing command /${command}: ${error instanceof Error ? error.message : String(error)}`
 				)
 			);
 			return false;
@@ -214,7 +215,7 @@ export class CommandParser {
 			}
 		}
 
-		console.log(chalk.cyan('\n📋 Available Commands:\n'));
+		console.log(chalk.cyan('\n Available Commands:\n'));
 
 		// Display in predefined order
 		for (const category of categoryOrder) {
@@ -238,9 +239,9 @@ export class CommandParser {
 		}
 
 		console.log(
-			chalk.gray('💡 Use /help <command> for detailed information about a specific command')
+			chalk.gray(' Use /help <command> for detailed information about a specific command')
 		);
-		console.log(chalk.gray('💡 Use <Tab> for command auto-completion'));
+		console.log(chalk.gray(' Use <Tab> for command auto-completion'));
 	}
 
 	/**
@@ -302,8 +303,8 @@ export class CommandParser {
 							// Add null check
 							this.displayHelp(commandName);
 						} else {
-							console.log(chalk.red(`❌ Unknown command: ${commandName || 'undefined'}`));
-							console.log(chalk.gray('💡 Use /help to see all available commands'));
+							console.log(chalk.red(` Unknown command: ${commandName || 'undefined'}`));
+							console.log(chalk.gray(' Use /help to see all available commands'));
 						}
 					} else {
 						// Display all commands categorized
@@ -313,7 +314,7 @@ export class CommandParser {
 				} catch (error) {
 					console.log(
 						chalk.red(
-							`❌ Error displaying help: ${error instanceof Error ? error.message : String(error)}`
+							` Error displaying help: ${error instanceof Error ? error.message : String(error)}`
 						)
 					);
 					return true;
@@ -329,12 +330,12 @@ export class CommandParser {
 			category: 'basic',
 			handler: async () => {
 				try {
-					console.log(chalk.yellow('👋 Goodbye! Your conversation has been saved to memory.'));
+					console.log(chalk.yellow(' Goodbye! Your conversation has been saved to memory.'));
 					process.exit(0);
 				} catch (error) {
 					console.log(
 						chalk.red(
-							`❌ Error during exit: ${error instanceof Error ? error.message : String(error)}`
+							` Error during exit: ${error instanceof Error ? error.message : String(error)}`
 						)
 					);
 					return true;
@@ -352,13 +353,13 @@ export class CommandParser {
 				try {
 					// Create a new session to effectively reset conversation
 					await agent.createSession('default');
-					console.log(chalk.green('🔄 Conversation history reset successfully'));
-					console.log(chalk.gray('💡 Starting fresh with a clean session'));
+					console.log(chalk.green(' Conversation history reset successfully'));
+					console.log(chalk.gray(' Starting fresh with a clean session'));
 					return true;
 				} catch (error) {
 					console.log(
 						chalk.red(
-							`❌ Failed to reset conversation: ${error instanceof Error ? error.message : String(error)}`
+							` Failed to reset conversation: ${error instanceof Error ? error.message : String(error)}`
 						)
 					);
 					return true;
@@ -375,11 +376,11 @@ export class CommandParser {
 				try {
 					const config = agent.getEffectiveConfig();
 
-					console.log(chalk.cyan('⚙️  Current Configuration:'));
+					console.log(chalk.cyan('  Current Configuration:'));
 					console.log('');
 
 					// LLM Configuration
-					console.log(chalk.yellow('🤖 LLM Configuration:'));
+					console.log(chalk.yellow(' LLM Configuration:'));
 					console.log(`  ${chalk.gray('Provider:')} ${config.llm.provider}`);
 					console.log(`  ${chalk.gray('Model:')} ${config.llm.model}`);
 					console.log(`  ${chalk.gray('Max Iterations:')} ${config.llm.maxIterations || 10}`);
@@ -389,7 +390,7 @@ export class CommandParser {
 					console.log('');
 
 					// Session Configuration
-					console.log(chalk.yellow('📊 Session Configuration:'));
+					console.log(chalk.yellow(' Session Configuration:'));
 					console.log(`  ${chalk.gray('Max Sessions:')} ${config.sessions?.maxSessions || 100}`);
 					console.log(
 						`  ${chalk.gray('Session TTL:')} ${((config.sessions?.sessionTTL || 3600000) / 1000 / 60).toFixed(0)} minutes`
@@ -397,7 +398,7 @@ export class CommandParser {
 					console.log('');
 
 					// MCP Servers
-					console.log(chalk.yellow('🔗 MCP Servers:'));
+					console.log(chalk.yellow(' MCP Servers:'));
 					if (config.mcpServers && Object.keys(config.mcpServers).length > 0) {
 						for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
 							// Handle different MCP server config types
@@ -409,7 +410,7 @@ export class CommandParser {
 							} else if (serverConfig.type) {
 								serverType = serverConfig.type;
 							}
-							console.log(`  ${chalk.gray('•')} ${name} (${serverType})`);
+							console.log(`  ${chalk.gray('')} ${name} (${serverType})`);
 						}
 					} else {
 						console.log(`  ${chalk.gray('No MCP servers configured')}`);
@@ -420,7 +421,7 @@ export class CommandParser {
 				} catch (error) {
 					console.log(
 						chalk.red(
-							`❌ Failed to get configuration: ${error instanceof Error ? error.message : String(error)}`
+							` Failed to get configuration: ${error instanceof Error ? error.message : String(error)}`
 						)
 					);
 					return true;
@@ -435,11 +436,11 @@ export class CommandParser {
 			category: 'system',
 			handler: async (args: string[], agent: MemAgent) => {
 				try {
-					console.log(chalk.cyan('📈 System Statistics:'));
+					console.log(chalk.cyan(' System Statistics:'));
 					console.log('');
 
 					// Session Statistics
-					console.log(chalk.yellow('📊 Session Metrics:'));
+					console.log(chalk.yellow(' Session Metrics:'));
 					const sessionCount = await agent.sessionManager.getSessionCount();
 					const activeSessionIds = await agent.sessionManager.getActiveSessionIds();
 					console.log(`  ${chalk.gray('Active Sessions:')} ${sessionCount}`);
@@ -449,7 +450,7 @@ export class CommandParser {
 					console.log('');
 
 					// MCP Server Statistics
-					console.log(chalk.yellow('🔗 MCP Server Stats:'));
+					console.log(chalk.yellow(' MCP Server Stats:'));
 					const mcpClients = agent.getMcpClients();
 					const failedConnections = agent.getMcpFailedConnections();
 					console.log(`  ${chalk.gray('Connected Servers:')} ${mcpClients.size}`);
@@ -460,20 +461,20 @@ export class CommandParser {
 					if (mcpClients.size > 0) {
 						console.log(`  ${chalk.gray('Active Clients:')}`);
 						for (const [name] of mcpClients) {
-							console.log(`    ${chalk.gray('•')} ${name}`);
+							console.log(`    ${chalk.gray('')} ${name}`);
 						}
 					}
 
 					if (Object.keys(failedConnections).length > 0) {
 						console.log(`  ${chalk.gray('Failed Servers:')}`);
 						for (const [name, error] of Object.entries(failedConnections)) {
-							console.log(`    ${chalk.gray('•')} ${name} (${error})`);
+							console.log(`    ${chalk.gray('')} ${name} (${error})`);
 						}
 					}
 					console.log('');
 
 					// Tool Statistics
-					console.log(chalk.yellow('🔧 Tool Stats:'));
+					console.log(chalk.yellow(' Tool Stats:'));
 					try {
 						const allTools = await agent.getAllMcpTools();
 						const toolCount = Object.keys(allTools).length;
@@ -494,7 +495,7 @@ export class CommandParser {
 				} catch (error) {
 					console.log(
 						chalk.red(
-							`❌ Failed to get statistics: ${error instanceof Error ? error.message : String(error)}`
+							` Failed to get statistics: ${error instanceof Error ? error.message : String(error)}`
 						)
 					);
 					return true;
@@ -509,7 +510,7 @@ export class CommandParser {
 			category: 'tools',
 			handler: async (args: string[], agent: MemAgent) => {
 				try {
-					console.log(chalk.cyan('🔧 Available Tools:'));
+					console.log(chalk.cyan(' Available Tools:'));
 					console.log('');
 
 					const allTools = await agent.getAllMcpTools();
@@ -517,7 +518,7 @@ export class CommandParser {
 
 					if (toolEntries.length === 0) {
 						console.log(chalk.gray('  No tools available'));
-						console.log(chalk.gray('  💡 Try connecting to MCP servers to access tools'));
+						console.log(chalk.gray('   Try connecting to MCP servers to access tools'));
 						return true;
 					}
 
@@ -563,7 +564,7 @@ export class CommandParser {
 
 					// Display tools grouped by server
 					for (const [serverName, tools] of Object.entries(toolsByServer)) {
-						console.log(chalk.yellow(`📦 ${serverName.toUpperCase()}:`));
+						console.log(chalk.yellow(` ${serverName.toUpperCase()}:`));
 
 						tools.sort((a, b) => a.name.localeCompare(b.name));
 						for (const tool of tools) {
@@ -581,7 +582,7 @@ export class CommandParser {
 				} catch (error) {
 					console.log(
 						chalk.red(
-							`❌ Failed to list tools: ${error instanceof Error ? error.message : String(error)}`
+							` Failed to list tools: ${error instanceof Error ? error.message : String(error)}`
 						)
 					);
 					return true;
@@ -621,9 +622,9 @@ export class CommandParser {
 						throw new Error('No compatible prompt manager found');
 					}
 
-					console.log(chalk.cyan('📝 Current System Prompt:'));
+					console.log(chalk.cyan(' Current System Prompt:'));
 					console.log('');
-					console.log(chalk.gray('╭─ System Prompt ─────────────────────────────────────────╮'));
+					console.log(chalk.gray(' System Prompt '));
 
 					// Split prompt into lines and format with borders
 					const lines = systemPrompt.split('\n');
@@ -636,14 +637,14 @@ export class CommandParser {
 							for (const word of words) {
 								if ((currentLine + word).length > 55) {
 									if (currentLine) {
-										console.log(chalk.gray('│ ') + currentLine.padEnd(55) + chalk.gray(' │'));
+										console.log(chalk.gray(' ') + currentLine.padEnd(55) + chalk.gray(' '));
 										currentLine = word + ' ';
 									} else {
 										// Word itself is too long, truncate
 										console.log(
-											chalk.gray('│ ') +
+											chalk.gray(' ') +
 												(word.substring(0, 52) + '...').padEnd(55) +
-												chalk.gray(' │')
+												chalk.gray(' ')
 										);
 									}
 								} else {
@@ -652,22 +653,22 @@ export class CommandParser {
 							}
 
 							if (currentLine.trim()) {
-								console.log(chalk.gray('│ ') + currentLine.trim().padEnd(55) + chalk.gray(' │'));
+								console.log(chalk.gray(' ') + currentLine.trim().padEnd(55) + chalk.gray(' '));
 							}
 						} else {
-							console.log(chalk.gray('│ ') + line.padEnd(55) + chalk.gray(' │'));
+							console.log(chalk.gray(' ') + line.padEnd(55) + chalk.gray(' '));
 						}
 					}
 
-					console.log(chalk.gray('╰─────────────────────────────────────────────────────────╯'));
+					console.log(chalk.gray(''));
 					console.log('');
 
-					console.log(chalk.gray(`💡 Prompt length: ${systemPrompt.length} characters`));
-					console.log(chalk.gray(`💡 Line count: ${lines.length} lines`));
+					console.log(chalk.gray(` Prompt length: ${systemPrompt.length} characters`));
+					console.log(chalk.gray(` Line count: ${lines.length} lines`));
 
 					return true;
 				} catch (error) {
-					console.error(chalk.red('❌ Error displaying system prompt:'), error);
+					console.error(chalk.red(' Error displaying system prompt:'), error);
 					return false;
 				}
 			},
@@ -714,8 +715,8 @@ export class CommandParser {
 					case 'h':
 						return this.sessionHelpHandler(subArgs, agent);
 					default:
-						console.log(chalk.red(`❌ Unknown session subcommand: ${subcommand}`));
-						console.log(chalk.gray('💡 Use /session help to see available subcommands'));
+						console.log(chalk.red(` Unknown session subcommand: ${subcommand}`));
+						console.log(chalk.gray(' Use /session help to see available subcommands'));
 						return false;
 				}
 			},
@@ -730,7 +731,7 @@ export class CommandParser {
 			handler: async (args: string[], agent: MemAgent) => {
 				try {
 					const detailed = args.includes('--detailed');
-					console.log(chalk.cyan('📊 System Prompt Performance Statistics'));
+					console.log(chalk.cyan(' System Prompt Performance Statistics'));
 					console.log(chalk.cyan('====================================='));
 
 					const promptManager = agent.promptManager;
@@ -749,21 +750,21 @@ export class CommandParser {
 							sessionId,
 							metadata: { storageManager },
 						});
-						console.log(chalk.yellow('🚀 **Enhanced Generation Performance**'));
+						console.log(chalk.yellow(' **Enhanced Generation Performance**'));
 						console.log(`   - Providers used: ${result.providerResults.length}`);
 						console.log(`   - Total prompt length: ${result.content.length} characters`);
 						console.log(`   - Generation time: ${result.generationTimeMs} ms`);
-						console.log(`   - Success: ${result.success ? '✅' : '❌'}`);
+						console.log(`   - Success: ${result.success ? '' : ''}`);
 						if (detailed) {
-							console.log(chalk.yellow('📈 **Per-Provider Breakdown**'));
+							console.log(chalk.yellow(' **Per-Provider Breakdown**'));
 							for (const r of result.providerResults) {
 								console.log(
-									`   - ${r.providerId}: ${r.success ? '✅' : '❌'} | ${r.generationTimeMs} ms | ${r.content.length} chars`
+									`   - ${r.providerId}: ${r.success ? '' : ''} | ${r.generationTimeMs} ms | ${r.content.length} chars`
 								);
 							}
 						}
 						if (result.errors && result.errors.length > 0) {
-							console.log(chalk.red('❌ Errors:'));
+							console.log(chalk.red(' Errors:'));
 							for (const err of result.errors) {
 								console.log(`   - ${err.message}`);
 							}
@@ -775,7 +776,7 @@ export class CommandParser {
 				} catch (error) {
 					console.log(
 						chalk.red(
-							`❌ Failed to get prompt statistics: ${error instanceof Error ? error.message : String(error)}`
+							` Failed to get prompt statistics: ${error instanceof Error ? error.message : String(error)}`
 						)
 					);
 					return false;
@@ -791,7 +792,7 @@ export class CommandParser {
 			handler: async (args: string[], agent: MemAgent) => {
 				try {
 					if (args.length === 0) {
-						console.log(chalk.red('❌ Subcommand required'));
+						console.log(chalk.red(' Subcommand required'));
 						console.log(
 							chalk.gray(
 								'Available subcommands: list, add-dynamic, add-file, remove, update, enable, disable, help'
@@ -806,7 +807,7 @@ export class CommandParser {
 					// EnhancedPromptManager logic
 					const isEnhanced = typeof (promptManager as any).listProviders === 'function';
 					if (!isEnhanced) {
-						console.log('❌ Prompt provider management is only available in enhanced mode.');
+						console.log(' Prompt provider management is only available in enhanced mode.');
 						return false;
 					}
 					// Now safe to cast
@@ -817,10 +818,10 @@ export class CommandParser {
 							const activeProviders = enhanced.listProviders();
 							// Get all provider configs from configManager (for preview)
 							const allConfigs = enhanced.getConfig().providers;
-							console.log(chalk.cyan('📋 System Prompt Providers (Enhanced Mode)'));
+							console.log(chalk.cyan(' System Prompt Providers (Enhanced Mode)'));
 							// Active providers only
 							if (activeProviders.length > 0) {
-								console.log(chalk.green('🟢 Active Providers:'));
+								console.log(chalk.green(' Active Providers:'));
 								for (const p of activeProviders) {
 									let preview = '';
 									if (p.type === 'static') {
@@ -831,7 +832,7 @@ export class CommandParser {
 											preview = ` | Preview: "${preview.replace(/\n/g, ' ')}"`;
 										}
 									}
-									console.log(`  🟢 ${p.id} (${p.type})${preview}`);
+									console.log(`   ${p.id} (${p.type})${preview}`);
 								}
 							} else {
 								console.log(chalk.gray('  No active providers.'));
@@ -839,19 +840,19 @@ export class CommandParser {
 							console.log('');
 							console.log(
 								chalk.gray(
-									'💡 Use /prompt-providers show-all to see all available and disabled providers.'
+									' Use /prompt-providers show-all to see all available and disabled providers.'
 								)
 							);
 							console.log(
 								chalk.gray(
-									'💡 Use /prompt-providers add-dynamic or add-file to activate more providers.'
+									' Use /prompt-providers add-dynamic or add-file to activate more providers.'
 								)
 							);
 							return true;
 						}
 						case 'add-dynamic': {
 							if (subArgs.length < 1) {
-								console.log(chalk.red('❌ Generator name required'));
+								console.log(chalk.red(' Generator name required'));
 								console.log(
 									chalk.gray('Usage: /prompt-providers add-dynamic <generator> [--history N|all]')
 								);
@@ -872,7 +873,7 @@ export class CommandParser {
 								config: { generator, history },
 							};
 							await enhanced.addOrUpdateProvider(config);
-							console.log(chalk.green(`✅ Dynamic provider '${generator}' added/updated.`));
+							console.log(chalk.green(` Dynamic provider '${generator}' added/updated.`));
 							// Immediately trigger LLM to generate the summary and cache it
 							const sessionId = agent.getCurrentSessionId && agent.getCurrentSessionId();
 							let storageManager = undefined;
@@ -903,22 +904,22 @@ export class CommandParser {
 								}
 							}
 							if (summaryResult) {
-								console.log(chalk.cyan(`📝 Generated summary for '${generator}':`));
+								console.log(chalk.cyan(` Generated summary for '${generator}':`));
 								console.log(summaryResult.content);
 							} else {
 								// Fallback: show any error or message
 								const errorResult = result.providerResults.find(r => r.providerId === generator);
 								if (errorResult && errorResult.content) {
-									console.log(chalk.yellow(`⚠️  ${errorResult.content}`));
+									console.log(chalk.yellow(`  ${errorResult.content}`));
 								} else {
-									console.log(chalk.yellow('⚠️  No summary content generated.'));
+									console.log(chalk.yellow('  No summary content generated.'));
 								}
 							}
 							return true;
 						}
 						case 'add-file': {
 							if (subArgs.length < 1) {
-								console.log(chalk.red('❌ Provider name required'));
+								console.log(chalk.red(' Provider name required'));
 								console.log(
 									chalk.gray(
 										'Usage: /prompt-providers add-file <name> [<path>] [--summarize true|false]'
@@ -948,7 +949,7 @@ export class CommandParser {
 								c => c.name === name && c.type === 'file-based'
 							);
 							if (!configFromFile) {
-								console.log(chalk.red(`❌ File-based provider '${name}' not found in config`));
+								console.log(chalk.red(` File-based provider '${name}' not found in config`));
 								return false;
 							}
 							if (!filePath) filePath = configFromFile.config?.filePath;
@@ -956,7 +957,7 @@ export class CommandParser {
 							if (!filePath) {
 								console.log(
 									chalk.red(
-										`❌ File path for provider '${name}' is not specified and not found in config`
+										` File path for provider '${name}' is not specified and not found in config`
 									)
 								);
 								return false;
@@ -986,32 +987,32 @@ export class CommandParser {
 										try {
 											await provider.generateContent(context);
 											console.log(
-												chalk.gray('💡 LLM summary generated and cached for file-based provider.')
+												chalk.gray(' LLM summary generated and cached for file-based provider.')
 											);
 										} catch {
 											console.log(
 												chalk.yellow(
-													'⚠️  LLM summarization failed to cache immediately, will retry on next /prompt.'
+													'  LLM summarization failed to cache immediately, will retry on next /prompt.'
 												)
 											);
 										}
 									}
 								}
 							}
-							console.log(chalk.green(`✅ File-based provider '${name}' added/updated.`));
+							console.log(chalk.green(` File-based provider '${name}' added/updated.`));
 							return true;
 						}
 						case 'remove': {
 							const name = subArgs[0] ?? '';
 							await enhanced.removeProvider(name);
-							console.log(chalk.green(`✅ Provider '${name}' removed.`));
+							console.log(chalk.green(` Provider '${name}' removed.`));
 							return true;
 						}
 						case 'update': {
 							const name = subArgs[0] ?? '';
 							const provider = enhanced.getProvider(name);
 							if (!provider) {
-								console.log(chalk.red(`❌ Provider '${name}' not found`));
+								console.log(chalk.red(` Provider '${name}' not found`));
 								return false;
 							}
 							// Use safe object spread for config
@@ -1050,23 +1051,23 @@ export class CommandParser {
 									try {
 										await updatedProvider.generateContent(context);
 										console.log(
-											chalk.gray('💡 LLM summary generated and cached for file-based provider.')
+											chalk.gray(' LLM summary generated and cached for file-based provider.')
 										);
 									} catch {
 										console.log(
 											chalk.yellow(
-												'⚠️  LLM summarization failed to cache immediately, will retry on next /prompt.'
+												'  LLM summarization failed to cache immediately, will retry on next /prompt.'
 											)
 										);
 									}
 								}
 							}
-							console.log(chalk.green(`✅ Provider '${name}' updated.`));
+							console.log(chalk.green(` Provider '${name}' updated.`));
 							return true;
 						}
 						case 'enable': {
 							if (subArgs.length === 0) {
-								console.log(chalk.red('❌ Provider name required'));
+								console.log(chalk.red(' Provider name required'));
 								console.log(chalk.gray('Usage: /prompt-providers enable <provider-name>'));
 								return false;
 							}
@@ -1081,24 +1082,24 @@ export class CommandParser {
 								const allConfigs = enhanced.getConfig().providers;
 								const config = allConfigs.find(c => c.name === providerName);
 								if (!config) {
-									console.log(chalk.red(`❌ Provider '${providerName}' not found in config`));
+									console.log(chalk.red(` Provider '${providerName}' not found in config`));
 									return false;
 								}
 								config.enabled = true;
 								console.log(
 									chalk.green(
-										`✅ Provider '${providerName}' enabled (config updated, will take effect if loaded).`
+										` Provider '${providerName}' enabled (config updated, will take effect if loaded).`
 									)
 								);
 								return true;
 							}
 							provider.enabled = true;
-							console.log(chalk.green(`✅ Provider '${providerName}' enabled.`));
+							console.log(chalk.green(` Provider '${providerName}' enabled.`));
 							return true;
 						}
 						case 'disable': {
 							if (subArgs.length === 0) {
-								console.log(chalk.red('❌ Provider name required'));
+								console.log(chalk.red(' Provider name required'));
 								console.log(chalk.gray('Usage: /prompt-providers disable <provider-name>'));
 								return false;
 							}
@@ -1113,19 +1114,19 @@ export class CommandParser {
 								const allConfigs = enhanced.getConfig().providers;
 								const config = allConfigs.find(c => c.name === providerName);
 								if (!config) {
-									console.log(chalk.red(`❌ Provider '${providerName}' not found in config`));
+									console.log(chalk.red(` Provider '${providerName}' not found in config`));
 									return false;
 								}
 								config.enabled = false;
 								console.log(
 									chalk.green(
-										`✅ Provider '${providerName}' disabled (config updated, will take effect if loaded).`
+										` Provider '${providerName}' disabled (config updated, will take effect if loaded).`
 									)
 								);
 								return true;
 							}
 							provider.enabled = false;
-							console.log(chalk.green(`✅ Provider '${providerName}' disabled.`));
+							console.log(chalk.green(` Provider '${providerName}' disabled.`));
 							return true;
 						}
 						case 'show-all': {
@@ -1142,10 +1143,10 @@ export class CommandParser {
 							const activeEnabled = enabledProviders.filter(c => activeNames.has(c.name));
 							const availableEnabled = enabledProviders.filter(c => !activeNames.has(c.name));
 							// Output
-							console.log(chalk.cyan('📋 All Providers (Enabled and Disabled)'));
+							console.log(chalk.cyan(' All Providers (Enabled and Disabled)'));
 							// Active enabled
 							if (activeEnabled.length > 0) {
-								console.log(chalk.green('🟢 Active:'));
+								console.log(chalk.green(' Active:'));
 								for (const c of activeEnabled) {
 									let preview = '';
 									if (c.type === 'static' && typeof c.config?.content === 'string') {
@@ -1153,14 +1154,14 @@ export class CommandParser {
 										if (c.config.content.length > 60) preview += '...';
 										preview = ` | Preview: "${preview.replace(/\n/g, ' ')}"`;
 									}
-									console.log(`  🟢 ${c.name} (${c.type})${preview}`);
+									console.log(`   ${c.name} (${c.type})${preview}`);
 								}
 							} else {
 								console.log(chalk.gray('  No active enabled providers.'));
 							}
 							// Available enabled
 							if (availableEnabled.length > 0) {
-								console.log(chalk.yellow('🟡 Available (Enabled, Not Yet Loaded):'));
+								console.log(chalk.yellow(' Available (Enabled, Not Yet Loaded):'));
 								for (const c of availableEnabled) {
 									let preview = '';
 									if (c.type === 'static' && typeof c.config?.content === 'string') {
@@ -1168,14 +1169,14 @@ export class CommandParser {
 										if (c.config.content.length > 60) preview += '...';
 										preview = ` | Preview: "${preview.replace(/\n/g, ' ')}"`;
 									}
-									console.log(`  🟡 ${c.name} (${c.type})${preview}`);
+									console.log(`   ${c.name} (${c.type})${preview}`);
 								}
 							} else {
 								console.log(chalk.gray('  No available enabled providers.'));
 							}
 							// Disabled providers
 							if (disabledProviders.length > 0) {
-								console.log(chalk.red('🔴 Disabled:'));
+								console.log(chalk.red(' Disabled:'));
 								for (const c of disabledProviders) {
 									let preview = '';
 									if (c.type === 'static' && typeof c.config?.content === 'string') {
@@ -1183,20 +1184,20 @@ export class CommandParser {
 										if (c.config.content.length > 60) preview += '...';
 										preview = ` | Preview: "${preview.replace(/\n/g, ' ')}"`;
 									}
-									console.log(chalk.red(`  🔴 ${c.name} (${c.type})${preview}`));
+									console.log(chalk.red(`   ${c.name} (${c.type})${preview}`));
 								}
 							} else {
 								console.log(chalk.gray('  No disabled providers.'));
 							}
 							console.log('');
-							console.log(chalk.gray('💡 All providers listed here are from config.'));
+							console.log(chalk.gray(' All providers listed here are from config.'));
 							console.log(
-								chalk.gray('💡 Use /prompt-providers enable/disable to manage provider status.')
+								chalk.gray(' Use /prompt-providers enable/disable to manage provider status.')
 							);
 							return true;
 						}
 						case 'help': {
-							console.log(chalk.cyan('\n📋 Prompt Provider Management Commands:\n'));
+							console.log(chalk.cyan('\n Prompt Provider Management Commands:\n'));
 							console.log(chalk.yellow('Available subcommands:'));
 							const subcommands = [
 								'/prompt-providers list - List active and available prompt providers',
@@ -1212,16 +1213,16 @@ export class CommandParser {
 							subcommands.forEach(cmd => console.log(`  ${cmd}`));
 							console.log(
 								'\n' +
-									chalk.gray('💡 Providers are components that generate parts of the system prompt')
+									chalk.gray(' Providers are components that generate parts of the system prompt')
 							);
-							console.log(chalk.gray('💡 Different provider types: static, dynamic, file-based'));
+							console.log(chalk.gray(' Different provider types: static, dynamic, file-based'));
 							console.log(
-								chalk.gray('💡 Use add-dynamic/add-file to activate available providers.')
+								chalk.gray(' Use add-dynamic/add-file to activate available providers.')
 							);
 							return true;
 						}
 						default:
-							console.log(chalk.red(`❌ Unknown subcommand: ${subcommand}`));
+							console.log(chalk.red(` Unknown subcommand: ${subcommand}`));
 							console.log(
 								chalk.gray(
 									'Available subcommands: list, add-dynamic, add-file, remove, update, enable, disable, help'
@@ -1232,7 +1233,7 @@ export class CommandParser {
 				} catch (error) {
 					console.log(
 						chalk.red(
-							`❌ Error in prompt-providers: ${error instanceof Error ? error.message : String(error)}`
+							` Error in prompt-providers: ${error instanceof Error ? error.message : String(error)}`
 						)
 					);
 					return false;
@@ -1269,11 +1270,11 @@ export class CommandParser {
 						return true;
 					}
 
-					console.log(chalk.cyan('📝 Enhanced System Prompt Display'));
+					console.log(chalk.cyan(' Enhanced System Prompt Display'));
 					console.log(chalk.cyan('==================================\n'));
 
 					// Summary stats
-					console.log(chalk.yellow('📊 **Prompt Statistics**'));
+					console.log(chalk.yellow(' **Prompt Statistics**'));
 					console.log(`   - Total length: ${systemPrompt.length} characters`);
 					console.log(`   - Line count: ${systemPrompt.split('\n').length} lines`);
 					console.log(`   - User instruction: ${userPrompt}`);
@@ -1282,41 +1283,101 @@ export class CommandParser {
 
 					// Show preview or detailed view
 					if (detailed) {
-						console.log(chalk.yellow('📄 **Prompt Content (Full)**'));
-						console.log(chalk.gray('╭─ System Prompt ────────────────────────────────────────╮'));
+						console.log(chalk.yellow(' **Prompt Content (Full)**'));
+						console.log(chalk.gray(' System Prompt '));
 						const lines = systemPrompt.split('\n');
 						for (const line of lines) {
 							const truncated = line.length > 50 ? line.substring(0, 47) + '...' : line;
-							console.log(chalk.gray('│ ') + truncated.padEnd(50) + chalk.gray(' │'));
+							console.log(chalk.gray(' ') + truncated.padEnd(50) + chalk.gray(' '));
 						}
-						console.log(chalk.gray('╰────────────────────────────────────────────────────────╯'));
+						console.log(chalk.gray(''));
 						console.log('');
 					} else {
-						console.log(chalk.yellow('📄 **Prompt Preview** (first 500 chars)'));
-						console.log(chalk.gray('╭─ System Prompt Preview ───────────────────────────────╮'));
+						console.log(chalk.yellow(' **Prompt Preview** (first 500 chars)'));
+						console.log(chalk.gray(' System Prompt Preview '));
 						const preview = systemPrompt.substring(0, 500);
 						const lines = preview.split('\n');
 						for (const line of lines) {
 							const truncated = line.length > 50 ? line.substring(0, 47) + '...' : line;
-							console.log(chalk.gray('│ ') + truncated.padEnd(50) + chalk.gray(' │'));
+							console.log(chalk.gray(' ') + truncated.padEnd(50) + chalk.gray(' '));
 						}
 						if (systemPrompt.length > 500) {
 							console.log(
-								chalk.gray('│ ') + chalk.dim('... (truncated)').padEnd(50) + chalk.gray(' │')
+								chalk.gray(' ') + chalk.dim('... (truncated)').padEnd(50) + chalk.gray(' ')
 							);
 						}
-						console.log(chalk.gray('╰────────────────────────────────────────────────────────╯'));
+						console.log(chalk.gray(''));
 						console.log('');
 					}
 
-					console.log(chalk.gray('💡 Use --detailed for full breakdown'));
-					console.log(chalk.gray('💡 Use --raw for raw text output'));
+					console.log(chalk.gray(' Use --detailed for full breakdown'));
+					console.log(chalk.gray(' Use --raw for raw text output'));
 
 					return true;
 				} catch (error) {
 					console.log(
 						chalk.red(
-							`❌ Error displaying prompt: ${error instanceof Error ? error.message : String(error)}`
+							` Error displaying prompt: ${error instanceof Error ? error.message : String(error)}`
+						)
+					);
+					return false;
+				}
+			},
+		});
+
+		// Token statistics commands
+		this.registerCommand({
+			name: 'tokens',
+			description: 'Display token usage statistics',
+			usage: '/tokens [stats|reset|toggle|report]',
+			aliases: ['tok'],
+			category: 'system',
+			handler: async (args: string[], agent: MemAgent) => {
+				try {
+					const tokenTracker = getTokenTracker();
+					const subcommand = args[0] || 'stats';
+
+					switch (subcommand) {
+						case 'stats':
+						case 's':
+							tokenTracker.displayStats();
+							break;
+						case 'compact':
+						case 'c':
+							tokenTracker.displayCompactStats();
+							break;
+						case 'reset':
+						case 'r':
+							tokenTracker.reset();
+							break;
+						case 'toggle':
+						case 't':
+							const enabled = args[1] === 'on' ? true : args[1] === 'off' ? false : undefined;
+							tokenTracker.toggleDisplay(enabled);
+							break;
+						case 'report':
+							console.log(tokenTracker.generateReport());
+							break;
+						case 'help':
+						case 'h':
+							console.log(chalk.cyan(' Token Statistics Commands:'));
+							console.log(chalk.gray('  /tokens stats    - Show detailed token statistics'));
+							console.log(chalk.gray('  /tokens compact  - Show compact one-line statistics'));
+							console.log(chalk.gray('  /tokens reset    - Reset token counters'));
+							console.log(chalk.gray('  /tokens toggle   - Toggle token display on/off'));
+							console.log(chalk.gray('  /tokens report   - Generate full usage report'));
+							break;
+						default:
+							console.log(chalk.red(` Unknown tokens subcommand: ${subcommand}`));
+							console.log(chalk.gray(' Use /tokens help for available options'));
+							break;
+					}
+
+					return true;
+				} catch (error) {
+					console.log(
+						chalk.red(
+							` Error with token command: ${error instanceof Error ? error.message : String(error)}`
 						)
 					);
 					return false;
@@ -1329,7 +1390,7 @@ export class CommandParser {
 	 * Helper function to format session information
 	 */
 	private formatSessionInfo(sessionId: string, metadata?: any, isCurrent: boolean = false): string {
-		const prefix = isCurrent ? chalk.green('→') : ' ';
+		const prefix = isCurrent ? chalk.green('') : ' ';
 		const name = isCurrent ? chalk.green.bold(sessionId) : chalk.cyan(sessionId);
 
 		let info = `${prefix} ${name}`;
@@ -1360,12 +1421,12 @@ export class CommandParser {
 			const sessionIds = await agent.listSessions();
 			const currentSessionId = agent.getCurrentSessionId();
 
-			console.log(chalk.cyan('📋 Active Sessions:'));
+			console.log(chalk.cyan(' Active Sessions:'));
 			console.log('');
 
 			if (sessionIds.length === 0) {
 				console.log(chalk.gray('  No sessions found.'));
-				console.log(chalk.gray('  💡 Use /session new to create a session'));
+				console.log(chalk.gray('   Use /session new to create a session'));
 				return true;
 			}
 
@@ -1377,13 +1438,13 @@ export class CommandParser {
 
 			console.log('');
 			console.log(chalk.gray(`Total: ${sessionIds.length} sessions`));
-			console.log(chalk.gray('💡 Use /session switch <id> to change sessions'));
+			console.log(chalk.gray(' Use /session switch <id> to change sessions'));
 
 			return true;
 		} catch (error) {
 			console.log(
 				chalk.red(
-					`❌ Failed to list sessions: ${error instanceof Error ? error.message : String(error)}`
+					` Failed to list sessions: ${error instanceof Error ? error.message : String(error)}`
 				)
 			);
 			return false;
@@ -1398,17 +1459,17 @@ export class CommandParser {
 			const sessionId = args.length > 0 ? args[0] : undefined;
 
 			const session = await agent.createSession(sessionId);
-			console.log(chalk.green(`✅ Created new session: ${session.id}`));
+			console.log(chalk.green(` Created new session: ${session.id}`));
 
 			// Auto-switch to new session
 			await agent.loadSession(session.id);
-			console.log(chalk.blue('🔄 Switched to new session'));
+			console.log(chalk.blue(' Switched to new session'));
 
 			return true;
 		} catch (error) {
 			console.log(
 				chalk.red(
-					`❌ Failed to create session: ${error instanceof Error ? error.message : String(error)}`
+					` Failed to create session: ${error instanceof Error ? error.message : String(error)}`
 				)
 			);
 			return false;
@@ -1421,21 +1482,21 @@ export class CommandParser {
 	private async sessionSwitchHandler(args: string[], agent: MemAgent): Promise<boolean> {
 		try {
 			if (args.length === 0) {
-				console.log(chalk.red('❌ Session ID required'));
+				console.log(chalk.red(' Session ID required'));
 				console.log(chalk.gray('Usage: /session switch <id>'));
 				return false;
 			}
 
 			const sessionId = args[0];
 			if (!sessionId) {
-				console.log(chalk.red('❌ Session ID cannot be empty'));
+				console.log(chalk.red(' Session ID cannot be empty'));
 				return false;
 			}
 
 			await agent.loadSession(sessionId);
 
 			const metadata = await agent.getSessionMetadata(sessionId);
-			console.log(chalk.green(`✅ Switched to session: ${sessionId}`));
+			console.log(chalk.green(` Switched to session: ${sessionId}`));
 
 			if (metadata && metadata.messageCount && metadata.messageCount > 0) {
 				console.log(chalk.gray(`   ${metadata.messageCount} messages in history`));
@@ -1447,7 +1508,7 @@ export class CommandParser {
 		} catch (error) {
 			console.log(
 				chalk.red(
-					`❌ Failed to switch session: ${error instanceof Error ? error.message : String(error)}`
+					` Failed to switch session: ${error instanceof Error ? error.message : String(error)}`
 				)
 			);
 			return false;
@@ -1461,13 +1522,13 @@ export class CommandParser {
 		try {
 			const currentSessionId = agent.getCurrentSessionId();
 			if (!currentSessionId) {
-				console.log(chalk.yellow('⚠️ No current session'));
+				console.log(chalk.yellow(' No current session'));
 				return true;
 			}
 
 			const metadata = await agent.getSessionMetadata(currentSessionId);
 
-			console.log(chalk.cyan('📍 Current Session:'));
+			console.log(chalk.cyan(' Current Session:'));
 			console.log('');
 			console.log(`  ${this.formatSessionInfo(currentSessionId, metadata, true)}`);
 			console.log('');
@@ -1476,7 +1537,7 @@ export class CommandParser {
 		} catch (error) {
 			console.log(
 				chalk.red(
-					`❌ Failed to get current session: ${error instanceof Error ? error.message : String(error)}`
+					` Failed to get current session: ${error instanceof Error ? error.message : String(error)}`
 				)
 			);
 			return false;
@@ -1489,33 +1550,33 @@ export class CommandParser {
 	private async sessionDeleteHandler(args: string[], agent: MemAgent): Promise<boolean> {
 		try {
 			if (args.length === 0) {
-				console.log(chalk.red('❌ Session ID required'));
+				console.log(chalk.red(' Session ID required'));
 				console.log(chalk.gray('Usage: /session delete <id>'));
 				return false;
 			}
 
 			const sessionId = args[0];
 			if (!sessionId) {
-				console.log(chalk.red('❌ Session ID cannot be empty'));
+				console.log(chalk.red(' Session ID cannot be empty'));
 				return false;
 			}
 
 			const currentSessionId = agent.getCurrentSessionId();
 
 			if (sessionId === currentSessionId) {
-				console.log(chalk.yellow('⚠️  Cannot delete the currently active session'));
+				console.log(chalk.yellow('  Cannot delete the currently active session'));
 				console.log(chalk.gray('   Switch to another session first, then delete this one'));
 				return false;
 			}
 
 			await agent.removeSession(sessionId);
-			console.log(chalk.green(`✅ Deleted session: ${sessionId}`));
+			console.log(chalk.green(` Deleted session: ${sessionId}`));
 
 			return true;
 		} catch (error) {
 			console.log(
 				chalk.red(
-					`❌ Failed to delete session: ${error instanceof Error ? error.message : String(error)}`
+					` Failed to delete session: ${error instanceof Error ? error.message : String(error)}`
 				)
 			);
 			return false;
@@ -1531,7 +1592,7 @@ export class CommandParser {
 			const allSessionIds = await agent.listSessions();
 
 			if (allSessionIds.length === 0) {
-				console.log(chalk.yellow('⚠️  No sessions to delete'));
+				console.log(chalk.yellow('  No sessions to delete'));
 				return true;
 			}
 
@@ -1539,14 +1600,14 @@ export class CommandParser {
 			const sessionsToDelete = allSessionIds.filter(sessionId => sessionId !== currentSessionId);
 
 			if (sessionsToDelete.length === 0) {
-				console.log(chalk.yellow('⚠️  Only the active session exists, nothing to delete'));
+				console.log(chalk.yellow('  Only the active session exists, nothing to delete'));
 				console.log(chalk.gray('   The active session cannot be deleted'));
 				return true;
 			}
 
 			console.log(
 				chalk.yellow(
-					`🗑️  About to delete ${sessionsToDelete.length} sessions (excluding active session)`
+					`  About to delete ${sessionsToDelete.length} sessions (excluding active session)`
 				)
 			);
 			console.log(chalk.gray(`   Active session "${currentSessionId}" will be preserved`));
@@ -1560,27 +1621,27 @@ export class CommandParser {
 				try {
 					await agent.removeSession(sessionId);
 					deletedCount++;
-					console.log(chalk.green(`✅ Deleted session: ${sessionId}`));
+					console.log(chalk.green(` Deleted session: ${sessionId}`));
 				} catch (error) {
 					failedCount++;
 					failedSessions.push(sessionId);
 					console.log(
 						chalk.red(
-							`❌ Failed to delete session ${sessionId}: ${error instanceof Error ? error.message : String(error)}`
+							` Failed to delete session ${sessionId}: ${error instanceof Error ? error.message : String(error)}`
 						)
 					);
 				}
 			}
 
 			console.log('');
-			console.log(chalk.cyan('📊 Summary:'));
+			console.log(chalk.cyan(' Summary:'));
 			console.log(`  ${chalk.green('Deleted:')} ${deletedCount} sessions`);
 			console.log(`  ${chalk.red('Failed:')} ${failedCount} sessions`);
 			console.log(`  ${chalk.blue('Remaining:')} 1 active session`);
 
 			if (failedSessions.length > 0) {
 				console.log('');
-				console.log(chalk.yellow('⚠️  Failed to delete sessions:'));
+				console.log(chalk.yellow('  Failed to delete sessions:'));
 				failedSessions.forEach(sessionId => {
 					console.log(`  - ${sessionId}`);
 				});
@@ -1590,7 +1651,7 @@ export class CommandParser {
 		} catch (error) {
 			console.log(
 				chalk.red(
-					`❌ Failed to delete sessions: ${error instanceof Error ? error.message : String(error)}`
+					` Failed to delete sessions: ${error instanceof Error ? error.message : String(error)}`
 				)
 			);
 			return false;
@@ -1601,7 +1662,7 @@ export class CommandParser {
 	 * Session help subcommand handler
 	 */
 	private async sessionHelpHandler(_args: string[], _agent: MemAgent): Promise<boolean> {
-		console.log(chalk.cyan('\n📋 Session Management Commands:\n'));
+		console.log(chalk.cyan('\n Session Management Commands:\n'));
 
 		console.log(chalk.yellow('Available subcommands:'));
 
@@ -1617,9 +1678,9 @@ export class CommandParser {
 
 		subcommands.forEach(cmd => console.log(`  ${cmd}`));
 
-		console.log('\n' + chalk.gray('�� Sessions allow you to maintain separate conversations'));
-		console.log(chalk.gray('💡 Use /session switch <id> to change sessions'));
-		console.log(chalk.gray('💡 Session names can be custom or auto-generated UUIDs'));
+		console.log('\n' + chalk.gray(' Sessions allow you to maintain separate conversations'));
+		console.log(chalk.gray(' Use /session switch <id> to change sessions'));
+		console.log(chalk.gray(' Session names can be custom or auto-generated UUIDs'));
 		console.log('');
 
 		return true;
@@ -1630,7 +1691,7 @@ export class CommandParser {
 	 */
 	private async promptProvidersListHandler(_args: string[], agent: MemAgent): Promise<boolean> {
 		try {
-			console.log(chalk.cyan('📋 System Prompt Providers'));
+			console.log(chalk.cyan(' System Prompt Providers'));
 			console.log(chalk.cyan('==========================\n'));
 
 			const promptManager = agent.promptManager;
@@ -1643,26 +1704,26 @@ export class CommandParser {
 			if (providers.length === 0) {
 				console.log(chalk.gray('  No providers configured.'));
 				console.log(
-					chalk.gray('  💡 Use /prompt-providers add-dynamic, add-file, or update existing ones.')
+					chalk.gray('   Use /prompt-providers add-dynamic, add-file, or update existing ones.')
 				);
 			} else {
 				for (const p of providers) {
-					console.log(`${p.enabled ? chalk.green('🟢') : chalk.red('🔴')} ${p.id} (${p.type})`);
+					console.log(`${p.enabled ? chalk.green('') : chalk.red('')} ${p.id} (${p.type})`);
 				}
 			}
 			console.log('');
 
-			console.log(chalk.gray('💡 This is an Enhanced Prompt Manager system'));
+			console.log(chalk.gray(' This is an Enhanced Prompt Manager system'));
 			console.log(
-				chalk.gray('💡 You can manage providers like user-instruction, built-in-instructions, etc.')
+				chalk.gray(' You can manage providers like user-instruction, built-in-instructions, etc.')
 			);
-			console.log(chalk.gray('💡 Use /prompt-providers enable/disable to manage provider status.'));
+			console.log(chalk.gray(' Use /prompt-providers enable/disable to manage provider status.'));
 
 			return true;
 		} catch (error) {
 			console.log(
 				chalk.red(
-					`❌ Failed to list providers: ${error instanceof Error ? error.message : String(error)}`
+					` Failed to list providers: ${error instanceof Error ? error.message : String(error)}`
 				)
 			);
 			return false;
@@ -1675,14 +1736,14 @@ export class CommandParser {
 	private async promptProvidersEnableHandler(args: string[], _agent: MemAgent): Promise<boolean> {
 		try {
 			if (args.length === 0) {
-				console.log(chalk.red('❌ Provider name required'));
+				console.log(chalk.red(' Provider name required'));
 				console.log(chalk.gray('Usage: /prompt-providers enable <provider-name>'));
 				return false;
 			}
 
 			// const _providerName = args[0]; // Not used in this implementation
 
-			console.log(chalk.yellow('⚠️ Enhanced Prompt System Active'));
+			console.log(chalk.yellow(' Enhanced Prompt System Active'));
 			console.log('');
 			console.log('The current prompt system uses an Enhanced PromptManager that supports');
 			console.log('individual provider management.');
@@ -1693,14 +1754,14 @@ export class CommandParser {
 			console.log('  - dynamic-generators (dynamic, priority: 50)');
 			console.log('  - file-based-providers (file-based, priority: 40)');
 			console.log('');
-			console.log(chalk.gray('💡 Use /prompt-providers disable <name> to disable a provider.'));
-			console.log(chalk.gray('💡 Providers can be re-enabled by re-adding them.'));
+			console.log(chalk.gray(' Use /prompt-providers disable <name> to disable a provider.'));
+			console.log(chalk.gray(' Providers can be re-enabled by re-adding them.'));
 
 			return true;
 		} catch (error) {
 			console.log(
 				chalk.red(
-					`❌ Failed to enable provider: ${error instanceof Error ? error.message : String(error)}`
+					` Failed to enable provider: ${error instanceof Error ? error.message : String(error)}`
 				)
 			);
 			return false;
@@ -1713,14 +1774,14 @@ export class CommandParser {
 	private async promptProvidersDisableHandler(args: string[], _agent: MemAgent): Promise<boolean> {
 		try {
 			if (args.length === 0) {
-				console.log(chalk.red('❌ Provider name required'));
+				console.log(chalk.red(' Provider name required'));
 				console.log(chalk.gray('Usage: /prompt-providers disable <provider-name>'));
 				return false;
 			}
 
 			// const _providerName = args[0]; // Not used in this implementation
 
-			console.log(chalk.yellow('⚠️ Enhanced Prompt System Active'));
+			console.log(chalk.yellow(' Enhanced Prompt System Active'));
 			console.log('');
 			console.log('The current prompt system uses an Enhanced PromptManager that supports');
 			console.log('individual provider management.');
@@ -1729,14 +1790,14 @@ export class CommandParser {
 			console.log('  - You can disable a provider by removing it or setting enabled: false.');
 			console.log('  - Providers can be re-enabled by re-adding them or setting enabled: true.');
 			console.log('');
-			console.log(chalk.gray('💡 Use /prompt-providers enable <name> to re-enable a provider.'));
-			console.log(chalk.gray('💡 Providers can be re-enabled by re-adding them.'));
+			console.log(chalk.gray(' Use /prompt-providers enable <name> to re-enable a provider.'));
+			console.log(chalk.gray(' Providers can be re-enabled by re-adding them.'));
 
 			return true;
 		} catch (error) {
 			console.log(
 				chalk.red(
-					`❌ Failed to disable provider: ${error instanceof Error ? error.message : String(error)}`
+					` Failed to disable provider: ${error instanceof Error ? error.message : String(error)}`
 				)
 			);
 			return false;
@@ -1747,7 +1808,7 @@ export class CommandParser {
 	 * Prompt providers help subcommand handler
 	 */
 	private async promptProvidersHelpHandler(_args: string[], _agent: MemAgent): Promise<boolean> {
-		console.log(chalk.cyan('\n📋 Prompt Provider Management Commands:\n'));
+		console.log(chalk.cyan('\n Prompt Provider Management Commands:\n'));
 
 		console.log(chalk.yellow('Available subcommands:'));
 
@@ -1761,14 +1822,14 @@ export class CommandParser {
 		subcommands.forEach(cmd => console.log(`  ${cmd}`));
 
 		console.log(
-			'\n' + chalk.gray('💡 Providers are components that generate parts of the system prompt')
+			'\n' + chalk.gray(' Providers are components that generate parts of the system prompt')
 		);
-		console.log(chalk.gray('💡 Different provider types: static, dynamic, file-based'));
+		console.log(chalk.gray(' Different provider types: static, dynamic, file-based'));
 		console.log(
-			chalk.gray('💡 Current system uses Enhanced Prompt Manager for provider management')
+			chalk.gray(' Current system uses Enhanced Prompt Manager for provider management')
 		);
 		console.log(
-			chalk.gray('💡 You can manage providers like user-instruction, built-in-instructions, etc.')
+			chalk.gray(' You can manage providers like user-instruction, built-in-instructions, etc.')
 		);
 		console.log('');
 
@@ -1780,3 +1841,4 @@ export class CommandParser {
  * Global command parser instance
  */
 export const commandParser = new CommandParser();
+

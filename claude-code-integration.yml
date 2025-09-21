@@ -1,0 +1,46 @@
+# Cipher configuration for Claude Code integration
+
+mcpServers:
+  filesystem:
+    type: stdio
+    command: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-filesystem"
+      - .
+    connectionMode: lenient
+
+  claude-code:
+    type: stdio
+    command: node
+    args:
+      - ./dist/src/mcp-servers/claude-code-integration.cjs
+    connectionMode: lenient
+    timeout: 60000
+    enabled: true
+
+llm:
+  provider: gemini
+  model: gemini-2.0-flash
+  apiKey: $GEMINI_API_KEY
+  maxIterations: 50
+
+embedding:
+  type: gemini
+  model: gemini-embedding-001
+  apiKey: $GEMINI_API_KEY
+
+systemPrompt:
+  enabled: true
+  content: |
+    You are a Cipher agent with access to a Claude Code MCP server.
+    Use the Claude Code tools for code review, debugging, and token statistics.
+    Available Claude Code tools:
+      - claude_code_execute  run Claude Code commands
+      - claude_code_status  check Claude Code availability
+      - claude_code_config  read or update Claude Code configuration
+      - claude_code_token_stats  inspect token usage
+      - cipher_to_claude_code  send data from Cipher to Claude Code
+
+    Always explain when you hand work over to Claude Code and summarise the
+    result for the user.

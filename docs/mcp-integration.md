@@ -439,4 +439,49 @@ npx @modelcontextprotocol/inspector cipher --mode mcp
 - [CLI Reference](./cli-reference.md) - Command-line options and usage
 - [Configuration](./configuration.md) - Main configuration guide
 - [Examples](./examples.md) - Real-world integration examples
-- [Workspace Memory](./workspace-memory.md) - Team memory features
+- [Workspace Memory](./workspace-memory.md) - Team memory features## Claude Code integration example
+
+Use this configuration when you want Cipher to act as the memory layer for Claude Code via MCP.
+
+1. Build Cipher (this also compiles the Claude Code MCP server):
+   ```bash
+   pnpm run build
+   pnpm run build-ui      # optional, only needed for the web UI
+   pnpm run copy-ui-dist  # ensure the standalone UI bundle is copied into dist
+   ```
+
+2. Start Cipher in CLI mode with the sample integration config:
+   ```bash
+   node dist/src/app/index.cjs --agent claude-code-integration.yml --mode cli
+   ```
+
+3. In Claude Code (Desktop), add the MCP server in `claude_desktop_config.json`:
+   ```json
+   {
+     "mcpServers": {
+       "cipher": {
+         "type": "sse",
+         "url": "http://localhost:3001/api/mcp/sse",
+         "supportsBidirectionalStream": true
+       }
+     }
+   }
+   ```
+
+4. Available Claude Code tools exposed by Cipher:
+   - `claude_code_execute` - run an arbitrary Claude Code command
+   - `claude_code_status` - check whether Claude Code is reachable
+   - `claude_code_config` - read or update Claude Code settings
+   - `claude_code_token_stats` - fetch token usage metrics
+   - `cipher_to_claude_code` - send snippets from Cipher to Claude Code for review or debugging
+
+5. Use the integration from the Cipher CLI:
+   ```
+   cipher> Check the Claude Code integration status
+   cipher> Run Claude Code with the command "explain async/await in JavaScript"
+   cipher> Send this function to Claude Code for review: function add(a, b) { return a + b; }
+   ```
+
+If the Claude Code MCP server fails to connect, verify that `claude-code-integration.yml` points to the compiled `dist/src/mcp-servers/claude-code-integration.cjs` file and that the `claude` CLI is installed and accessible in `PATH`.
+
+

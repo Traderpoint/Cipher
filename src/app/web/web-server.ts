@@ -118,6 +118,7 @@ export class WebServerManager {
 			cwd: this.uiPath,
 			env,
 			stdio: ['pipe', 'pipe', 'pipe'],
+			shell: true, // Use shell on Windows for better compatibility
 		});
 
 		this.setupProcessHandlers();
@@ -143,6 +144,7 @@ export class WebServerManager {
 			const installProcess = spawn(packageManager, ['install'], {
 				cwd: this.uiPath,
 				stdio: ['pipe', 'pipe', 'pipe'],
+				shell: true, // Use shell for Windows compatibility
 			});
 
 			installProcess.stdout?.on('data', data => {

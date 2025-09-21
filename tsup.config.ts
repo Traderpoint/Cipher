@@ -36,4 +36,31 @@ export default defineConfig([
 		],
 		noExternal: ['chalk', 'boxen', 'commander'],
 	},
+	{
+		entry: ['src/mcp-servers/claude-code-integration.ts'],
+		format: ['cjs'],
+		outDir: 'dist/src/mcp-servers',
+		shims: true,
+		bundle: true,
+		platform: 'node',
+		target: 'node18',
+		external: [
+			'better-sqlite3',
+			'pg',
+			'neo4j-driver',
+			'ioredis',
+			'fs',
+			'path',
+			'os',
+			'crypto',
+			'stream',
+			'util',
+			'events',
+			'child_process',
+		],
+		// Remove shebang for CJS files on Windows
+		// banner: {
+		//   js: '#!/usr/bin/env node',
+		// },
+	},
 ]);

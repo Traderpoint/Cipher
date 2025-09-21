@@ -31,14 +31,14 @@ Built by [Byterover team](https://byterover.dev/)
 
 **Key Features:**
 
-- 🔌 MCP integration with any IDE you want.
-- 🧠 Auto-generate AI coding memories that scale with your codebase.
-- 🔄 Switch seamlessly between IDEs without losing memory and context.
-- 🤝 Easily share coding memories across your dev team in real time.
-- 🧬 Dual Memory Layer that captures System 1 (Programming Concepts & Business Logic & Past Interaction) and System 2 (reasoning steps of the model when generating code).
-- ⚙️ Install on your IDE with zero configuration needed.
+- MCP integration with any IDE you want.
+- Auto-generate AI coding memories that scale with your codebase.
+- Switch seamlessly between IDEs without losing memory and context.
+- Easily share coding memories across your dev team in real time.
+- Dual Memory Layer that captures System 1 (Programming Concepts & Business Logic & Past Interaction) and System 2 (reasoning steps of the model when generating code).
+- Install on your IDE with zero configuration needed.
 
-## Quick Start 🚀
+## Quick Start
 
 ### NPM Package (Recommended for Most Users)
 
@@ -71,7 +71,7 @@ docker-compose up --build -d
 curl http://localhost:3000/health
 ```
 
-> **💡 Note:** Docker builds automatically skip the UI build step to avoid ARM64 compatibility issues with lightningcss. The UI is not included in the Docker image by default.
+> **Note:** Docker builds automatically skip the UI build step to avoid ARM64 compatibility issues with lightningcss. The UI is not included in the Docker image by default.
 >
 > To include the UI in the Docker build, use: `docker build --build-arg BUILD_UI=true .`
 
@@ -112,7 +112,7 @@ curl -X POST http://localhost:3000/api/sessions -H "Content-Type: application/js
 ```
 
 If the API cannot reach PostgreSQL, the server log shows `Failed to connect to database backend`. Fix the credentials/service and rerun the commands above.
-### CLI Usage 💻
+### CLI Usage
 
 <details>
 <summary>Show CLI commands</summary>
@@ -134,9 +134,9 @@ cipher --mode mcp
 cipher --mode ui
 ```
 
-> **⚠️ Note:** When running MCP mode in terminal/shell, export all environment variables as Cipher won't read from `.env` file.
+> **Note:** When running MCP mode in terminal/shell, export all environment variables as Cipher won't read from `.env` file.
 >
-> **💡 Tip:** CLI mode automatically continues or creates the "default" session. Use `/session new <session-name>` to start a fresh session.
+> **Tip:** CLI mode automatically continues or creates the "default" session. Use `/session new <session-name>` to start a fresh session.
 
 </details>
 
@@ -148,7 +148,7 @@ _The Cipher Web UI provides an intuitive interface for interacting with memory-p
 
 Cipher supports multiple configuration options for different deployment scenarios. The main configuration file is located at `memAgent/cipher.yml`.
 
-### Basic Configuration ⚙️
+### Basic Configuration
 
 <details>
 <summary>Show YAML example</summary>
@@ -173,9 +173,9 @@ mcpServers:
 
 </details>
 
-📖 **See [Configuration Guide](./docs/configuration.md)** for complete details.
+ **See [Configuration Guide](./docs/configuration.md)** for complete details.
 
-### Environment Variables 🔐
+### Environment Variables
 
 Create a `.env` file in your project root with these essential variables:
 
@@ -233,7 +233,7 @@ SEARCH_MEMORY_TYPE=knowledge  # knowledge, reflection, both (default: knowledge)
 DISABLE_REFLECTION_MEMORY=true  # default: true
 ```
 
-> **💡 Tip:** Copy `.env.example` to `.env` and fill in your values:
+> **Tip:** Copy `.env.example` to `.env` and fill in your values:
 >
 > ```bash
 > cp .env.example .env
@@ -274,9 +274,9 @@ To use Cipher as an MCP server in your MCP client configuration:
 }
 ```
 
-📖 **See [MCP Integration Guide](./docs/mcp-integration.md)** for complete MCP setup and advanced features.
+ **See [MCP Integration Guide](./docs/mcp-integration.md)** for complete MCP setup and advanced features.
 
-👉 **Built‑in tools overview** — expand the dropdown below to scan everything at a glance. For full details, see [`docs/builtin-tools.md`](./docs/builtin-tools.md) 📘.
+ **Built-in tools overview**  expand the dropdown below to scan everything at a glance. For full details, see [`docs/builtin-tools.md`](./docs/builtin-tools.md) .
 
 <details>
 <summary>Built-in Tools (overview)</summary>
@@ -313,7 +313,7 @@ For detailed configuration instructions, see the [CLI Coding Agents guide](./exa
 
 ## Documentation
 
-### 📚 Complete Documentation
+###  Complete Documentation
 
 | Topic                                                        | Description                                                                       |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
@@ -324,10 +324,11 @@ For detailed configuration instructions, see the [CLI Coding Agents guide](./exa
 | [Chat History](./docs/chat-history.md)                       | PostgreSQL, SQLite session storage and management                                 |
 | [CLI Reference](./docs/cli-reference.md)                     | Complete command-line interface documentation                                     |
 | [MCP Integration](./docs/mcp-integration.md)                 | Advanced MCP server setup, aggregator mode, and IDE integrations                  |
+| [Claude Code Integration](./docs/mcp-integration.md#claude-code-integration-example) | Step-by-step instructions for linking Cipher to Claude Code via MCP |
 | [Workspace Memory](./docs/workspace-memory.md)               | Team-aware memory system for collaborative development                            |
 | [Examples](./docs/examples.md)                               | Real-world integration examples and use cases                                     |
 
-### 🚀 Next Steps
+###  Next Steps
 
 For detailed documentation, visit:
 
@@ -344,7 +345,7 @@ We welcome contributions! Refer to our [Contributing Guide](./CONTRIBUTING.md) f
 **cipher** is the opensource version of the agentic memory of [byterover](https://byterover.dev/) which is built and maintained by the byterover team.
 
 - Join our [Discord](https://discord.com/invite/UMRrpNjh5W) to share projects, ask questions, or just say hi!
-- If you enjoy cipher, please give us a ⭐ on GitHub—it helps a lot!
+- If you enjoy cipher, please give us a  on GitHubit helps a lot!
 - Follow [@kevinnguyendn](https://x.com/kevinnguyendn) on X
 
 ## Contributors
@@ -366,3 +367,5 @@ Thanks to all these amazing people for contributing to cipher!
 ## License
 
 Elastic License 2.0. See [LICENSE](LICENSE) for full terms.
+
+

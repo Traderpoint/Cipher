@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import { executeCommand } from './commands.js';
 import { commandParser } from './parser.js';
 import type { AggregatorConfig } from '@core/mcp/types.js';
+import { getTokenTracker } from './token-stats-display.js';
 
 // Constants for compression display
 const COMPRESSION_CHECK_DELAY = 100;
@@ -30,10 +31,10 @@ export async function startHeadlessCli(agent: MemAgent, input: string): Promise<
 				metadata = parseMetaString(metaStr);
 			}
 		} catch {
-			console.log(chalk.red('❌ Invalid metadata format. Use key=value,key2=value2 ...'));
+			console.log(chalk.red(' Invalid metadata format. Use key=value,key2=value2 ...'));
 			return;
 		}
-		console.log(chalk.gray('🤔 Processing (with metadata)...'));
+		console.log(chalk.gray(' Processing (with metadata)...'));
 		const result = await agent.run(message, undefined, undefined, false, {
 			memoryMetadata: metadata,
 		});
@@ -45,12 +46,40 @@ export async function startHeadlessCli(agent: MemAgent, input: string): Promise<
 			}
 		}
 		if (result && result.response) {
+			// Track tokens after response
+			const tokenTracker = getTokenTracker();
+			const config = agent.getEffectiveConfig();
+			const provider = config.llm?.provider || 'unknown';
+			const model = config.llm?.model || 'unknown';
+
+			// Estimate input tokens
+			const inputTokens = {
+				total: Math.ceil(message.length / 4),
+				characters: message.length,
+				estimated: true,
+				provider,
+				model,
+			};
+
+			// Estimate output tokens
+			const outputTokens = {
+				total: Math.ceil(result.response.length / 4),
+				characters: result.response.length,
+				estimated: true,
+				provider,
+				model,
+			};
+
+			tokenTracker.addInputTokens(inputTokens);
+			tokenTracker.addOutputTokens(outputTokens);
+
 			logger.displayAIResponse(result.response);
+			tokenTracker.displayCompactStats();
 		} else {
 			console.log(chalk.gray('No response received.'));
 		}
 	} else {
-		console.log(chalk.gray('🤔 Processing...'));
+		console.log(chalk.gray(' Processing...'));
 		const result = await agent.run(input);
 		if (result && result.backgroundOperations) {
 			try {
@@ -60,7 +89,35 @@ export async function startHeadlessCli(agent: MemAgent, input: string): Promise<
 			}
 		}
 		if (result && result.response) {
+			// Track tokens after response
+			const tokenTracker = getTokenTracker();
+			const config = agent.getEffectiveConfig();
+			const provider = config.llm?.provider || 'unknown';
+			const model = config.llm?.model || 'unknown';
+
+			// Estimate input tokens
+			const inputTokens = {
+				total: Math.ceil(input.length / 4),
+				characters: input.length,
+				estimated: true,
+				provider,
+				model,
+			};
+
+			// Estimate output tokens
+			const outputTokens = {
+				total: Math.ceil(result.response.length / 4),
+				characters: result.response.length,
+				estimated: true,
+				provider,
+				model,
+			};
+
+			tokenTracker.addInputTokens(inputTokens);
+			tokenTracker.addOutputTokens(outputTokens);
+
 			logger.displayAIResponse(result.response);
+			tokenTracker.displayCompactStats();
 		} else {
 			console.log(chalk.gray('No response received.'));
 		}
@@ -75,11 +132,19 @@ export async function startInteractiveCli(agent: MemAgent): Promise<void> {
 	await _initCli(agent);
 	await _initializeSessionAndCompression(agent);
 
-	console.log(chalk.cyan('🚀 Welcome to Cipher Interactive CLI!'));
+	// Initialize token tracking
+	const config = agent.getEffectiveConfig();
+	const provider = config.llm?.provider || 'unknown';
+	const model = config.llm?.model || 'unknown';
+	const tokenTracker = getTokenTracker(provider, model);
+	tokenTracker.startAutoDisplay();
+
+	console.log(chalk.cyan(' Welcome to Cipher Interactive CLI!'));
 	console.log(chalk.gray('Your memory-powered coding assistant is ready.'));
-	console.log(chalk.gray('• Type /help to see available commands'));
-	console.log(chalk.gray('• Use /exit or /quit to end the session'));
-	console.log(chalk.gray('• Regular messages will be sent to the AI agent\n'));
+	console.log(chalk.gray(' Type /help to see available commands'));
+	console.log(chalk.gray(' Use /exit or /quit to end the session'));
+	console.log(chalk.gray(' Use /tokens to view token usage statistics'));
+	console.log(chalk.gray(' Regular messages will be sent to the AI agent\n'));
 
 	const rl = readline.createInterface({
 		input: process.stdin,
@@ -89,7 +154,13 @@ export async function startInteractiveCli(agent: MemAgent): Promise<void> {
 
 	// Set up graceful shutdown
 	const handleExit = () => {
-		console.log(chalk.yellow('\n👋 Goodbye! Your conversation has been saved to memory.'));
+		console.log(chalk.yellow('\n Goodbye! Your conversation has been saved to memory.'));
+
+		// Display final token statistics
+		const tokenTracker = getTokenTracker();
+		tokenTracker.stopAutoDisplay();
+		console.log(tokenTracker.generateReport());
+
 		rl.close();
 		process.exit(0);
 	};
@@ -122,11 +193,11 @@ export async function startInteractiveCli(agent: MemAgent): Promise<void> {
 						metadata = parseMetaString(metaStr);
 					}
 				} catch {
-					console.log(chalk.red('❌ Invalid metadata format. Use key=value,key2=value2 ...'));
+					console.log(chalk.red(' Invalid metadata format. Use key=value,key2=value2 ...'));
 					rl.prompt();
 					return;
 				}
-				console.log(chalk.gray('🤔 Thinking (with metadata)...'));
+				console.log(chalk.gray(' Thinking (with metadata)...'));
 				const result = await agent.run(message, undefined, undefined, false, {
 					memoryMetadata: metadata,
 				});
@@ -138,7 +209,35 @@ export async function startInteractiveCli(agent: MemAgent): Promise<void> {
 					}
 				}
 				if (result && result.response) {
+					// Track tokens after response
+					const tokenTracker = getTokenTracker();
+					const config = agent.getEffectiveConfig();
+					const provider = config.llm?.provider || 'unknown';
+					const model = config.llm?.model || 'unknown';
+
+					// Estimate input tokens
+					const inputTokens = {
+						total: Math.ceil(message.length / 4),
+						characters: message.length,
+						estimated: true,
+						provider,
+						model,
+					};
+
+					// Estimate output tokens
+					const outputTokens = {
+						total: Math.ceil(result.response.length / 4),
+						characters: result.response.length,
+						estimated: true,
+						provider,
+						model,
+					};
+
+					tokenTracker.addInputTokens(inputTokens);
+					tokenTracker.addOutputTokens(outputTokens);
+
 					logger.displayAIResponse(result.response);
+					tokenTracker.displayCompactStats();
 				} else {
 					console.log(chalk.gray('No response received.'));
 				}
@@ -192,20 +291,48 @@ export async function startInteractiveCli(agent: MemAgent): Promise<void> {
 							console.log(chalk.gray('Command execution failed or was cancelled.'));
 						}
 					} else {
-						console.log(chalk.red('❌ Invalid command format'));
+						console.log(chalk.red(' Invalid command format'));
 						commandParser.displayHelp();
 					}
 					// Always redisplay prompt after slash commands
 					rl.prompt();
 				} else {
 					// Handle regular user prompt - pass to agent
-					console.log(chalk.gray('🤔 Thinking...'));
+					console.log(chalk.gray(' Thinking...'));
 					const result = await agent.run(trimmedInput);
 
 					// Display the AI response immediately
 					if (result && result.response) {
+						// Track tokens after response
+						const tokenTracker = getTokenTracker();
+						const config = agent.getEffectiveConfig();
+						const provider = config.llm?.provider || 'unknown';
+						const model = config.llm?.model || 'unknown';
+
+						// Estimate input tokens
+						const inputTokens = {
+							total: Math.ceil(trimmedInput.length / 4),
+							characters: trimmedInput.length,
+							estimated: true,
+							provider,
+							model,
+						};
+
+						// Estimate output tokens
+						const outputTokens = {
+							total: Math.ceil(result.response.length / 4),
+							characters: result.response.length,
+							estimated: true,
+							provider,
+							model,
+						};
+
+						tokenTracker.addInputTokens(inputTokens);
+						tokenTracker.addOutputTokens(outputTokens);
+
 						// Display the AI response with nice formatting
 						logger.displayAIResponse(result.response);
+						tokenTracker.displayCompactStats();
 					} else {
 						console.log(chalk.gray('No response received.'));
 					}
@@ -254,7 +381,7 @@ export async function startInteractiveCli(agent: MemAgent): Promise<void> {
 	});
 
 	rl.on('close', () => {
-		console.log(chalk.yellow('\n👋 Session ended. Your conversation has been saved to memory.'));
+		console.log(chalk.yellow('\n Session ended. Your conversation has been saved to memory.'));
 		process.exit(0);
 	});
 }
@@ -544,10 +671,10 @@ async function _showCompressionStartup(agent: MemAgent): Promise<void> {
 		const stats = ctx.getTokenStats();
 
 		if (stats.maxTokens > 0) {
-			console.log(chalk.green('🧠 Token-Aware Compression System is ACTIVE'));
+			console.log(chalk.green(' Token-Aware Compression System is ACTIVE'));
 			console.log(
 				chalk.gray(
-					`• Max tokens: ${stats.maxTokens}, Compression strategy: ${ctx['compressionStrategy']?.name || 'unknown'}`
+					` Max tokens: ${stats.maxTokens}, Compression strategy: ${ctx['compressionStrategy']?.name || 'unknown'}`
 				)
 			);
 
@@ -586,7 +713,7 @@ async function _showCompressionInfo(agent: MemAgent): Promise<void> {
  * Display compression event information
  */
 function _displayCompressionEvent(_event: any): void {
-	console.log(chalk.yellowBright('⚡ Context has been compressed.'));
+	console.log(chalk.yellowBright(' Context has been compressed.'));
 }
 
 // Add utility for parsing metadata from CLI
@@ -603,3 +730,4 @@ export function parseMetaString(metaStr: string): Record<string, any> {
 	}
 	return metadata;
 }
+
