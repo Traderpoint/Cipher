@@ -23,7 +23,7 @@ export class WebServerManager {
 		const currentFilePath = fileURLToPath(currentFileUrl);
 
 		// Check if we're running from dist (compiled) or src (development)
-		const isCompiledVersion = currentFilePath.includes('/dist/');
+		const isCompiledVersion = currentFilePath.includes('/dist/') || currentFilePath.includes('\\dist\\');
 
 		if (isCompiledVersion) {
 			// When running from dist/src/app/index.cjs, UI is at dist/src/app/ui
@@ -33,6 +33,13 @@ export class WebServerManager {
 			// When running from src/app/web/web-server.ts, UI is at src/app/ui
 			this.uiPath = path.resolve(path.dirname(currentFilePath), '../ui');
 		}
+
+		// Debug logging
+		console.log('[DEBUG] WebServerManager path resolution:');
+		console.log('  currentFileUrl:', currentFileUrl);
+		console.log('  currentFilePath:', currentFilePath);
+		console.log('  isCompiledVersion:', isCompiledVersion);
+		console.log('  calculated uiPath:', this.uiPath);
 	}
 
 	async start(): Promise<void> {
@@ -44,13 +51,7 @@ export class WebServerManager {
 
 		// Check if UI directory exists
 		if (!existsSync(this.uiPath)) {
-			throw new Error(`UI directory not found at ${this.uiPath}`);
-		}
-
-		// Check if package.json exists in UI directory
-		const packageJsonPath = path.join(this.uiPath, 'package.json');
-		if (!existsSync(packageJsonPath)) {
-			throw new Error(`UI package.json not found at ${packageJsonPath}`);
+			throw new Error(`UI directory not found at ${this.uiPath}. Run 'pnpm run build' to build the UI first.`);
 		}
 
 		// Check if .next/standalone exists (production build)
@@ -61,6 +62,21 @@ export class WebServerManager {
 			// Use production build
 			await this.startProduction();
 		} else {
+			// Check if package.json exists for development mode
+			const packageJsonPath = path.join(this.uiPath, 'package.json');
+			if (!existsSync(packageJsonPath)) {
+				// Try to use the source UI directory for development
+				const sourceUiPath = path.resolve(path.dirname(this.uiPath), '../../src/app/ui');
+				const sourcePackageJsonPath = path.join(sourceUiPath, 'package.json');
+
+				if (existsSync(sourcePackageJsonPath)) {
+					logger.info('UI not built in dist, falling back to source UI directory for development', null, 'yellow');
+					this.uiPath = sourceUiPath;
+				} else {
+					throw new Error(`UI not properly built. Run 'pnpm run build' or 'pnpm run build-ui' to build the UI first.`);
+				}
+			}
+
 			// Use development mode
 			await this.startDevelopment();
 		}

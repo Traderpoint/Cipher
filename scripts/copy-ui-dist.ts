@@ -15,10 +15,36 @@ const targetDir: string = path.join(rootDir, 'dist', 'src', 'app', 'ui');
 
 async function copyUIBuild(): Promise<void> {
 	try {
-		// Check if UI build exists - if not, skip UI copy (for build:no-ui)
+		// Check if UI build exists - if not, copy minimal files for development fallback
 		const standalonePath = path.join(sourceUIDir, '.next', 'standalone');
-		if (!fs.existsSync(standalonePath)) {
-			console.log('⚠️  UI build not found, skipping UI copy (this is expected when using build:no-ui)');
+		const hasUIBuild = fs.existsSync(standalonePath);
+
+		if (!hasUIBuild) {
+			console.log('⚠️  UI build not found, copying minimal files for development fallback');
+
+			// Ensure the target directory exists
+			await fs.ensureDir(targetDir);
+
+			// Copy package.json and any existing public/static files for development mode
+			const minimalFiles = [
+				{ src: 'package.json', dest: 'package.json', required: false },
+				{ src: 'public', dest: 'public', required: false },
+			];
+
+			for (const file of minimalFiles) {
+				const srcPath = path.join(sourceUIDir, file.src);
+				const destPath = path.join(targetDir, file.dest);
+
+				if (fs.existsSync(srcPath)) {
+					await fs.copy(srcPath, destPath, {
+						overwrite: true,
+						errorOnExist: false
+					});
+					console.log(`✅ Copied ${file.src} for development fallback`);
+				}
+			}
+
+			console.log('✅ Minimal UI files copied for development fallback');
 			return;
 		}
 
