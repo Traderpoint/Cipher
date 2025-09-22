@@ -70,3 +70,4 @@ qdrant-data/
 faiss-data/
 volumes/
 .kiro/
+nul
