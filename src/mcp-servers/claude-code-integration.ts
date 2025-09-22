@@ -15,16 +15,19 @@ import {
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 import { spawn, ChildProcess } from 'child_process';
-import { promisify } from 'util';
-import { writeFile, readFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, unlink, readdir } from 'fs/promises';
 import { existsSync } from 'fs';
-import path from 'path';
-import os from 'os';
+import * as path from 'path';
+import * as os from 'os';
 
 class ClaudeCodeIntegrationServer {
   private server: Server;
   private claudeCodeProcess: ChildProcess | null = null;
   private tempDir: string;
+  private tempFiles: Set<string> = new Set();
+  private cleanupInterval: NodeJS.Timeout | null = null;
+  private runningProcesses: Map<string, ChildProcess> = new Map();
+  private processCounter: number = 0;
 
   constructor() {
     this.server = new Server(
@@ -47,6 +50,7 @@ class ClaudeCodeIntegrationServer {
 
     this.setupToolHandlers();
     this.setupErrorHandling();
+    this.startCleanupTimer();
   }
 
   private setupErrorHandling(): void {
@@ -69,6 +73,92 @@ class ClaudeCodeIntegrationServer {
     if (this.claudeCodeProcess) {
       this.claudeCodeProcess.kill();
       this.claudeCodeProcess = null;
+    }
+
+    // Kill all running processes
+    for (const [processId, process] of Array.from(this.runningProcesses)) {
+      try {
+        process.kill('SIGTERM');
+        setTimeout(() => {
+          if (!process.killed) {
+            process.kill('SIGKILL');
+          }
+        }, 5000);
+      } catch (error) {
+        console.error(`[MCP Claude Code Integration] Error killing process ${processId}:`, error);
+      }
+    }
+    this.runningProcesses.clear();
+
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+
+    await this.cleanupTempFiles();
+  }
+
+  private startCleanupTimer(): void {
+    // Clean up temp files every 5 minutes
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupOldTempFiles().catch(error => {
+        console.error('[MCP Claude Code Integration] Error during periodic cleanup:', error);
+      });
+    }, 5 * 60 * 1000);
+  }
+
+  private async cleanupTempFiles(): Promise<void> {
+    try {
+      for (const filePath of Array.from(this.tempFiles)) {
+        try {
+          await unlink(filePath);
+        } catch {
+          // Ignore errors for files that may have already been deleted
+        }
+      }
+      this.tempFiles.clear();
+    } catch (error) {
+      console.error('[MCP Claude Code Integration] Error cleaning up temp files:', error);
+    }
+  }
+
+  private async cleanupOldTempFiles(): Promise<void> {
+    try {
+      if (!existsSync(this.tempDir)) return;
+
+      const files = await readdir(this.tempDir);
+      const now = Date.now();
+      const maxAge = 60 * 60 * 1000; // 1 hour
+
+      for (const file of files) {
+        const filePath = path.join(this.tempDir, file);
+        const match = file.match(/cipher-data-(\d+)\./);
+        if (match) {
+          const timestamp = parseInt(match[1]);
+          if (now - timestamp > maxAge) {
+            try {
+              await unlink(filePath);
+              this.tempFiles.delete(filePath);
+            } catch {
+              // Ignore errors for files that may have already been deleted
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[MCP Claude Code Integration] Error during periodic cleanup:', error);
+    }
+  }
+
+  private validateArgs(args: any, requiredFields: string[], toolName: string): void {
+    if (!args || typeof args !== 'object') {
+      throw new Error(`${toolName}: Arguments must be an object`);
+    }
+
+    for (const field of requiredFields) {
+      if (!(field in args) || args[field] === undefined || args[field] === null) {
+        throw new Error(`${toolName}: Missing required field '${field}'`);
+      }
     }
   }
 
@@ -224,19 +314,47 @@ class ClaudeCodeIntegrationServer {
   }
 
   private async executeClaudeCode(args: any): Promise<any> {
+    this.validateArgs(args, ['command'], 'claude_code_execute');
+
     const { command, mode = 'print', options = {} } = args;
+
+    if (typeof command !== 'string' || command.trim().length === 0) {
+      throw new Error('claude_code_execute: Command must be a non-empty string');
+    }
+
+    if (mode && !['interactive', 'print'].includes(mode)) {
+      throw new Error('claude_code_execute: Mode must be either "interactive" or "print"');
+    }
+
     const { timeout = 30000, cwd } = options;
 
     return new Promise((resolve, reject) => {
+      const processId = `claude_${++this.processCounter}_${Date.now()}`;
       const claudeArgs = mode === 'print' ? ['--print', command] : [command];
-      const claudeProcess = spawn('claude', claudeArgs, {
+
+      // Try different ways to find Claude Code CLI
+      const claudeCommand = process.platform === 'win32' ? 'claude.cmd' : 'claude';
+
+      const claudeProcess = spawn(claudeCommand, claudeArgs, {
         cwd: cwd || process.cwd(),
-        timeout,
         stdio: ['pipe', 'pipe', 'pipe'],
+        shell: process.platform === 'win32', // Use shell on Windows to resolve PATH
       });
+
+      this.runningProcesses.set(processId, claudeProcess);
 
       let stdout = '';
       let stderr = '';
+      let isResolved = false;
+      let timeoutHandle: NodeJS.Timeout | null = null;
+
+      const cleanup = () => {
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle);
+          timeoutHandle = null;
+        }
+        this.runningProcesses.delete(processId);
+      };
 
       claudeProcess.stdout?.on('data', (data) => {
         stdout += data.toString();
@@ -247,30 +365,48 @@ class ClaudeCodeIntegrationServer {
       });
 
       claudeProcess.on('close', (code) => {
-        resolve({
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                success: code === 0,
-                stdout: stdout.trim(),
-                stderr: stderr.trim(),
-                exitCode: code,
-                command: `claude ${claudeArgs.join(' ')}`,
-              }, null, 2),
-            },
-          ],
-        });
+        if (!isResolved) {
+          isResolved = true;
+          cleanup();
+          resolve({
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  success: code === 0,
+                  stdout: stdout.trim(),
+                  stderr: stderr.trim(),
+                  exitCode: code,
+                  command: `claude ${claudeArgs.join(' ')}`,
+                  processId,
+                }, null, 2),
+              },
+            ],
+          });
+        }
       });
 
       claudeProcess.on('error', (error) => {
-        reject(error);
+        if (!isResolved) {
+          isResolved = true;
+          cleanup();
+          reject(new Error(`Claude Code process error: ${error.message}`));
+        }
       });
 
-      // Set timeout
-      setTimeout(() => {
-        claudeProcess.kill();
-        reject(new Error(`Claude Code command timed out after ${timeout}ms`));
+      // Set timeout with proper cleanup
+      timeoutHandle = setTimeout(() => {
+        if (!isResolved) {
+          isResolved = true;
+          claudeProcess.kill('SIGTERM');
+          setTimeout(() => {
+            if (!claudeProcess.killed) {
+              claudeProcess.kill('SIGKILL');
+            }
+          }, 5000);
+          cleanup();
+          reject(new Error(`Claude Code command timed out after ${timeout}ms`));
+        }
       }, timeout);
     });
   }
@@ -312,14 +448,27 @@ class ClaudeCodeIntegrationServer {
   }
 
   private async handleClaudeCodeConfig(args: any) {
+    this.validateArgs(args, ['action'], 'claude_code_config');
+
     const { action, key, value } = args;
+
+    if (!['get', 'set'].includes(action)) {
+      throw new Error('claude_code_config: Action must be either "get" or "set"');
+    }
 
     if (action === 'get') {
       return await this.executeClaudeCode({
         command: 'config list',
         mode: 'print',
       });
-    } else if (action === 'set' && key && value) {
+    } else if (action === 'set') {
+      if (!key || typeof key !== 'string') {
+        throw new Error('claude_code_config: Key is required for set action and must be a string');
+      }
+      if (value === undefined || value === null) {
+        throw new Error('claude_code_config: Value is required for set action');
+      }
+
       return await this.executeClaudeCode({
         command: `config set ${key} ${value}`,
         mode: 'print',
@@ -332,24 +481,77 @@ class ClaudeCodeIntegrationServer {
   private async getTokenStats(args: any) {
     const { reset = false } = args;
 
-    // Note: This would need to be implemented based on Claude Code's actual API
-    // For now, returning a placeholder
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            message: 'Token statistics feature would be implemented here',
-            reset_requested: reset,
-            note: 'Requires Claude Code API extension for token tracking',
-          }, null, 2),
-        },
-      ],
-    };
+    try {
+      // Try to get token stats from Claude Code
+      const statsResult = await this.executeClaudeCode({
+        command: 'stats',
+        mode: 'print',
+      });
+
+      if (reset) {
+        // Reset stats if requested
+        const resetResult = await this.executeClaudeCode({
+          command: 'stats --reset',
+          mode: 'print',
+        });
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                action: 'reset',
+                previous_stats: statsResult,
+                reset_result: resetResult,
+                timestamp: new Date().toISOString(),
+              }, null, 2),
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              action: 'get',
+              stats: statsResult,
+              timestamp: new Date().toISOString(),
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error: 'Token statistics not available',
+              message: error instanceof Error ? error.message : String(error),
+              note: 'Claude Code may not support stats command or is not accessible',
+              timestamp: new Date().toISOString(),
+            }, null, 2),
+          },
+        ],
+        isError: true,
+      };
+    }
   }
 
   private async sendDataToClaudeCode(args: any) {
+    this.validateArgs(args, ['data', 'request_type'], 'cipher_to_claude_code');
+
     const { data, format = 'json', request_type } = args;
+
+    if (!['json', 'text', 'code'].includes(format)) {
+      throw new Error('cipher_to_claude_code: Format must be one of: json, text, code');
+    }
+
+    if (!['analysis', 'debugging', 'generation', 'review'].includes(request_type)) {
+      throw new Error('cipher_to_claude_code: Request type must be one of: analysis, debugging, generation, review');
+    }
 
     // Create a temporary file with the data
     const fileName = `cipher-data-${Date.now()}.${format}`;
@@ -365,6 +567,7 @@ class ClaudeCodeIntegrationServer {
       }
 
       await writeFile(filePath, fileContent, 'utf8');
+      this.tempFiles.add(filePath);
 
       // Construct prompt based on request type
       let prompt = '';

@@ -324,7 +324,7 @@ For detailed configuration instructions, see the [CLI Coding Agents guide](./exa
 | [Chat History](./docs/chat-history.md)                       | PostgreSQL, SQLite session storage and management                                 |
 | [CLI Reference](./docs/cli-reference.md)                     | Complete command-line interface documentation                                     |
 | [MCP Integration](./docs/mcp-integration.md)                 | Advanced MCP server setup, aggregator mode, and IDE integrations                  |
-| [Claude Code Integration](./docs/mcp-integration.md#claude-code-integration-example) | Step-by-step instructions for linking Cipher to Claude Code via MCP |
+| [Claude Code Integration](./docs/claude-code-integration-navod.md) | Kompletní návod na propojení Cipher s Claude Code přes MCP |
 | [Workspace Memory](./docs/workspace-memory.md)               | Team-aware memory system for collaborative development                            |
 | [Examples](./docs/examples.md)                               | Real-world integration examples and use cases                                     |
 
