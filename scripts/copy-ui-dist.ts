@@ -51,7 +51,20 @@ async function copyUIBuild(): Promise<void> {
 		// Ensure the target directory doesn't exist to avoid conflicts
 		if (fs.existsSync(targetDir)) {
 			console.log('Removing existing target directory...');
-			await fs.remove(targetDir);
+			try {
+				await fs.remove(targetDir);
+			} catch (error) {
+				console.log('Warning: Could not remove target directory completely, continuing...');
+				// Try to remove specific files instead of the whole directory
+				try {
+					const standaloneTargetPath = path.join(targetDir, '.next', 'standalone');
+					if (fs.existsSync(standaloneTargetPath)) {
+						await fs.emptyDir(standaloneTargetPath);
+					}
+				} catch (emptyError) {
+					console.log('Warning: Could not empty standalone directory, files may be locked');
+				}
+			}
 		}
 
 		console.log(`Copying built UI from ${sourceUIDir} to ${targetDir}...`);
