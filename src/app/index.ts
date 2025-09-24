@@ -106,7 +106,7 @@ program
 		'MCP transport type (stdio, sse, streamable-http)',
 		'stdio'
 	)
-	.option('--mcp-port <port>', 'Port for MCP server (only used with sse, streamable-http)', '3000')
+	.option('--mcp-port <port>', 'Port for MCP server (only used with sse, streamable-http)', '3002')
 	.option(
 		'--mcp-host <host>',
 		'Host for MCP server (only used with sse, streamable-http)',

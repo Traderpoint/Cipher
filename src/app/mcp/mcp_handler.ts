@@ -565,7 +565,7 @@ export async function createMcpTransport(
 				throw new Error('MCP server instance is required for SSE transport');
 			}
 
-			const transportPort = port || 3000;
+			const transportPort = port || 3002;
 			logger.info(
 				`[MCP Handler] Setting up SSE transport with dedicated SSE server on port ${transportPort}`
 			);
@@ -596,7 +596,7 @@ export async function createMcpTransport(
 				throw new Error('MCP server instance is required for streamable-HTTP transport');
 			}
 
-			const transportPort = port || 3001;
+			const transportPort = port || 3002;
 			logger.info(
 				`[MCP Handler] Setting up streamable-HTTP transport with dedicated HTTP server on port ${transportPort}`
 			);

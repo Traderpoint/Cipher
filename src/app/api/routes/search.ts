@@ -9,14 +9,32 @@ import { Router, Request, Response } from 'express';
 import { MemAgent } from '@core/brain/memAgent/index.js';
 // TODO: SearchService will be implemented in the future
 // import { SearchService } from '@core/ai/search/search-service.js';
-import { errorResponse, ERROR_CODES } from '../utils/response.js';
+import { successResponse, errorResponse, ERROR_CODES } from '../utils/response.js';
 import { logger } from '@core/logger/index.js';
 
 export function createSearchRoutes(_agent: MemAgent): Router {
 	const router = Router();
 
-	// TODO: SearchService implementation will be added in the future
-	// For now, return "not implemented" responses
+	// Helper function to calculate relevance score
+	const calculateRelevance = (content: string, query: string): number => {
+		const lowerContent = content.toLowerCase();
+		const lowerQuery = query.toLowerCase();
+
+		// Exact match bonus
+		const exactMatches = (lowerContent.match(new RegExp(lowerQuery, 'g')) || []).length;
+		let score = exactMatches * 10;
+
+		// Position bonus (earlier matches score higher)
+		const firstIndex = lowerContent.indexOf(lowerQuery);
+		if (firstIndex >= 0) {
+			score += Math.max(0, 100 - firstIndex);
+		}
+
+		// Length penalty (shorter content with matches scores higher)
+		score += Math.max(0, 1000 - content.length) / 100;
+
+		return score;
+	};
 
 	/**
 	 * GET /api/search/messages
@@ -31,20 +49,94 @@ export function createSearchRoutes(_agent: MemAgent): Router {
 	 */
 	router.get('/messages', async (req: Request, res: Response) => {
 		try {
-			logger.info('Message search requested but not implemented', {
+			const { q, sessionId, role, limit = 50, offset = 0 } = req.query;
+
+			if (!q || typeof q !== 'string') {
+				return errorResponse(
+					res,
+					ERROR_CODES.BAD_REQUEST,
+					'Query parameter "q" is required and must be a string',
+					400,
+					undefined,
+					req.requestId
+				);
+			}
+
+			logger.info('Message search requested', {
 				requestId: req.requestId,
-				query: req.query,
+				query: q,
+				sessionId,
+				role,
+				limit,
+				offset,
 			});
 
-			// Return "not implemented" response
-			return errorResponse(
+			// Get all sessions to search through
+			const sessionIds = sessionId && typeof sessionId === 'string'
+				? [sessionId]
+				: await _agent.listSessions();
+
+			const results = [];
+			const maxLimit = Math.min(parseInt(String(limit)) || 50, 100);
+			const startOffset = parseInt(String(offset)) || 0;
+			let totalCount = 0;
+
+			for (const sId of sessionIds) {
+				try {
+					const history = await _agent.getSessionHistory(sId);
+					if (!history || !Array.isArray(history)) continue;
+
+					// Search through messages
+					for (let i = 0; i < history.length; i++) {
+						const message = history[i];
+						if (!message || typeof message.content !== 'string') continue;
+
+						// Role filter
+						if (role && message.role !== role) continue;
+
+						// Simple text search (case-insensitive)
+						const searchTerm = q.toLowerCase();
+						const messageText = message.content.toLowerCase();
+
+						if (messageText.includes(searchTerm)) {
+							totalCount++;
+
+							// Apply pagination
+							if (totalCount > startOffset && results.length < maxLimit) {
+								results.push({
+									sessionId: sId,
+									messageId: message.id || `${sId}_${i}`,
+									role: message.role,
+									content: message.content,
+									timestamp: message.timestamp || null,
+									relevance: calculateRelevance(message.content, q),
+								});
+							}
+						}
+					}
+				} catch (error) {
+					logger.warn(`Failed to search session ${sId}:`, error);
+					continue;
+				}
+			}
+
+			// Sort by relevance (simple scoring based on exact matches and position)
+			results.sort((a, b) => b.relevance - a.relevance);
+
+			successResponse(
 				res,
-				ERROR_CODES.INTERNAL_ERROR,
-				'Search functionality is not yet implemented. This feature will be available in a future release.',
-				501,
-				undefined,
+				{
+					results,
+					totalCount,
+					query: q,
+					limit: maxLimit,
+					offset: startOffset,
+					timestamp: new Date().toISOString(),
+				},
+				200,
 				req.requestId
 			);
+
 		} catch (error) {
 			const errorMsg = error instanceof Error ? error.message : String(error);
 			logger.error('Message search route error', {
@@ -73,20 +165,86 @@ export function createSearchRoutes(_agent: MemAgent): Router {
 	 */
 	router.get('/sessions', async (req: Request, res: Response) => {
 		try {
-			logger.info('Session search requested but not implemented', {
+			const { q } = req.query;
+
+			if (!q || typeof q !== 'string') {
+				return errorResponse(
+					res,
+					ERROR_CODES.BAD_REQUEST,
+					'Query parameter "q" is required and must be a string',
+					400,
+					undefined,
+					req.requestId
+				);
+			}
+
+			logger.info('Session search requested', {
 				requestId: req.requestId,
-				query: req.query,
+				query: q,
 			});
 
-			// Return "not implemented" response
-			return errorResponse(
+			// Get all sessions
+			const sessionIds = await _agent.listSessions();
+			const results = [];
+
+			for (const sessionId of sessionIds) {
+				try {
+					const history = await _agent.getSessionHistory(sessionId);
+					const metadata = await _agent.getSessionMetadata(sessionId);
+
+					if (!history || !Array.isArray(history)) continue;
+
+					let sessionRelevance = 0;
+					let matchingMessages = 0;
+					const searchTerm = q.toLowerCase();
+
+					// Search through messages in this session
+					for (const message of history) {
+						if (message && typeof message.content === 'string') {
+							const messageText = message.content.toLowerCase();
+							if (messageText.includes(searchTerm)) {
+								matchingMessages++;
+								sessionRelevance += calculateRelevance(message.content, q);
+							}
+						}
+					}
+
+					// If we found matches, include this session in results
+					if (matchingMessages > 0) {
+						results.push({
+							sessionId,
+							relevance: sessionRelevance,
+							matchingMessages,
+							totalMessages: history.length,
+							metadata: {
+								...metadata,
+								lastActivity: metadata?.lastActivity || null,
+								messageCount: metadata?.messageCount || history.length,
+							}
+						});
+					}
+
+				} catch (error) {
+					logger.warn(`Failed to search session ${sessionId}:`, error);
+					continue;
+				}
+			}
+
+			// Sort by relevance
+			results.sort((a, b) => b.relevance - a.relevance);
+
+			successResponse(
 				res,
-				ERROR_CODES.INTERNAL_ERROR,
-				'Search functionality is not yet implemented. This feature will be available in a future release.',
-				501,
-				undefined,
+				{
+					results,
+					totalSessions: results.length,
+					query: q,
+					timestamp: new Date().toISOString(),
+				},
+				200,
 				req.requestId
 			);
+
 		} catch (error) {
 			const errorMsg = error instanceof Error ? error.message : String(error);
 			logger.error('Session search route error', {

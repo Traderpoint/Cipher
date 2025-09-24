@@ -92,8 +92,8 @@ pnpm run build
 # Windows only: keep standalone UI assets when building
 FORCE_STANDALONE=true pnpm run build-ui
 
-# Start the API server on port 3000
-node dist/src/app/index.cjs --mode api --port 3000
+# Start the API server on port 3001
+node dist/src/app/index.cjs --mode api --port 3001
 ```
 
 > **Note:** On Windows, run the build/start commands from an elevated PowerShell or enable Developer Mode so PNPM can create the symlinks Next.js expects.
@@ -101,17 +101,61 @@ node dist/src/app/index.cjs --mode api --port 3000
 Verify the deployment:
 
 ```powershell
-# Health endpoint
-curl http://localhost:3000/health
+# API server health check
+curl http://localhost:3001/api/sessions
 
 # Create a session (persists in PostgreSQL if configured)
-curl -X POST http://localhost:3000/api/sessions -H "Content-Type: application/json" -d '{"sessionId":"api-test"}'
+curl -X POST http://localhost:3001/api/sessions -H "Content-Type: application/json" -d '{"sessionId":"api-test"}'
 
 # Direct PostgreSQL check (inline password avoids prompts)
 "C:/Program Files/PostgreSQL/17/bin/psql.exe" "postgresql://postgres:<password>@localhost:5432/cipher_db" -c "SELECT NOW();"
 ```
 
 If the API cannot reach PostgreSQL, the server log shows `Failed to connect to database backend`. Fix the credentials/service and rerun the commands above.
+
+### Port Configuration & Standalone UI
+
+By default, Cipher uses the following ports:
+- **API Server**: Port 3001 (backend services)
+- **UI Interface**: Port 3000 (web interface)
+- **MCP Server**: Port 3002 (Model Context Protocol)
+
+#### Running Standalone UI Interface
+
+To run the standalone UI interface that connects to the API server:
+
+```bash
+# Start API server on port 3001
+node dist/src/app/index.cjs --mode api --port 3001
+
+# In another terminal, start standalone UI on port 3000
+cd src/app/ui
+PORT=3000 API_URL=http://localhost:3001 pnpm dev
+```
+
+Access the interface at: http://localhost:3000
+
+#### Running MCP Server
+
+```bash
+# Start MCP server with SSE transport on port 3002 (default)
+node dist/src/app/index.cjs --mode mcp --mcp-transport-type sse --mcp-port 3002
+```
+
+#### All Services Running
+
+For complete local development with all services:
+
+```bash
+# Terminal 1: API Server
+node dist/src/app/index.cjs --mode api --port 3001
+
+# Terminal 2: Standalone UI
+cd src/app/ui && PORT=3000 API_URL=http://localhost:3001 pnpm dev
+
+# Terminal 3: MCP Server
+node dist/src/app/index.cjs --mode mcp --mcp-transport-type sse --mcp-port 3002
+```
 ### CLI Usage
 
 <details>

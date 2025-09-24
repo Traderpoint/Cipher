@@ -227,7 +227,10 @@ export class PgVectorBackend implements VectorStore {
 			}
 
 			await client.query(
-				`INSERT INTO ${this.collectionName} (id, vector, payload) VALUES ${placeholders.join(',')}`,
+				`INSERT INTO ${this.collectionName} (id, vector, payload) VALUES ${placeholders.join(',')}
+				 ON CONFLICT (id) DO UPDATE SET
+				 vector = EXCLUDED.vector,
+				 payload = EXCLUDED.payload`,
 				values
 			);
 

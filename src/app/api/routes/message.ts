@@ -215,9 +215,9 @@ export function createMessageRoutes(agent: MemAgent): Router {
 			});
 
 			if (sessionId) {
-				// Reset specific session
-				const success = await agent.removeSession(sessionId);
-				if (!success) {
+				// Reset specific session by clearing its conversation history
+				const session = await agent.getSession(sessionId);
+				if (!session) {
 					errorResponse(
 						res,
 						ERROR_CODES.SESSION_NOT_FOUND,
@@ -229,29 +229,69 @@ export function createMessageRoutes(agent: MemAgent): Router {
 					return;
 				}
 
-				// Create a new session with the same ID
-				const newSession = await agent.createSession(sessionId);
+				// Clear the conversation history instead of removing the session
+				try {
+					// First switch to a temporary session if this is the current session
+					const currentSessionId = agent.getCurrentSessionId();
+					let tempSessionId = null;
+					if (currentSessionId === sessionId) {
+						// Create temporary session and switch to it
+						const tempSession = await agent.createSession();
+						tempSessionId = tempSession.id;
+						await agent.loadSession(tempSessionId);
+					}
 
-				successResponse(
-					res,
-					{
-						message: `Session ${sessionId} has been reset`,
-						sessionId: newSession.id,
-						timestamp: new Date().toISOString(),
-					},
-					200,
-					req.requestId
-				);
+					// Now remove and recreate the session
+					await agent.removeSession(sessionId);
+					const newSession = await agent.createSession(sessionId);
+
+					// Switch back to the reset session if it was current
+					if (tempSessionId && currentSessionId === sessionId) {
+						await agent.loadSession(sessionId);
+						// Clean up temporary session
+						await agent.removeSession(tempSessionId);
+					}
+
+					successResponse(
+						res,
+						{
+							message: `Session ${sessionId} has been reset`,
+							sessionId: sessionId,
+							timestamp: new Date().toISOString(),
+						},
+						200,
+						req.requestId
+					);
+				} catch (clearError) {
+					throw new Error(`Failed to clear session history: ${clearError instanceof Error ? clearError.message : String(clearError)}`);
+				}
 			} else {
 				// Reset current session
 				const currentSessionId = agent.getCurrentSessionId();
 
-				if (currentSessionId) {
-					await agent.removeSession(currentSessionId);
+				if (!currentSessionId) {
+					errorResponse(
+						res,
+						ERROR_CODES.SESSION_NOT_FOUND,
+						'No current session found',
+						404,
+						undefined,
+						req.requestId
+					);
+					return;
 				}
 
-				// Create a new session
-				const newSession = await agent.createSession();
+				// Create a new temporary session first
+				const tempSession = await agent.createSession();
+				await agent.loadSession(tempSession.id);
+
+				// Now remove the old current session and recreate it
+				await agent.removeSession(currentSessionId);
+				const newSession = await agent.createSession(currentSessionId);
+				await agent.loadSession(newSession.id);
+
+				// Clean up temporary session
+				await agent.removeSession(tempSession.id);
 
 				successResponse(
 					res,

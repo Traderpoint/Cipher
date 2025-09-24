@@ -707,7 +707,34 @@ export function createSessionRoutes(agent: MemAgent): Router {
 			logger.info('Getting session performance stats', { requestId: req.requestId });
 
 			const sessionManager = agent.sessionManager;
-			const stats = await sessionManager.getSessionStats();
+
+			// Get basic session statistics
+			const sessionIds = await agent.listSessions();
+			let totalSessions = sessionIds.length;
+			let activeSessions = 0;
+			let totalMessages = 0;
+
+			// Count active sessions and messages
+			for (const sessionId of sessionIds) {
+				try {
+					const metadata = await agent.getSessionMetadata(sessionId);
+					if (metadata && metadata.messageCount > 0) {
+						activeSessions++;
+						totalMessages += metadata.messageCount || 0;
+					}
+				} catch (error) {
+					// Skip failed sessions
+					logger.debug(`Failed to get metadata for session ${sessionId}:`, error);
+				}
+			}
+
+			const stats = {
+				totalSessions,
+				activeSessions,
+				totalMessages,
+				averageMessagesPerSession: activeSessions > 0 ? Math.round(totalMessages / activeSessions) : 0,
+				currentSession: agent.getCurrentSessionId() || null,
+			};
 
 			// Add additional runtime metrics
 			const runtimeStats = {
