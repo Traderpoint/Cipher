@@ -135,6 +135,8 @@ PORT=3000 API_URL=http://localhost:3001 pnpm dev
 
 Access the interface at: http://localhost:3000
 
+The UI includes a clickable logo in the header that returns users to the welcome screen at any time. The welcome screen provides quick access to core functionality and allows switching between different sessions.
+
 #### Running MCP Server
 
 ```bash

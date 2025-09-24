@@ -67,6 +67,7 @@ export interface HeaderProps {
 	onToggleServers: () => void;
 	isSessionsPanelOpen: boolean;
 	isServersPanelOpen: boolean;
+	onReturnToWelcome?: () => void;
 }
 
 export interface WelcomeScreenProps {

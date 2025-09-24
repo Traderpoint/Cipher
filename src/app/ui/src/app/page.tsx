@@ -123,6 +123,7 @@ function MainChatInterface() {
           onToggleServers={toggleServers}
           isSessionsPanelOpen={isSessionsPanelOpen}
           isServersPanelOpen={isServersPanelOpen}
+          onReturnToWelcome={returnToWelcome}
         />
         
         <div className="flex-1 flex overflow-hidden">
