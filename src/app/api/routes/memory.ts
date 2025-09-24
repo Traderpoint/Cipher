@@ -7,11 +7,233 @@
 import { Router, Request, Response } from 'express';
 import { MemAgent } from '@core/brain/memAgent/index.js';
 import { successResponse, errorResponse, ERROR_CODES } from '../utils/response.js';
-import { validateRequest } from '../middleware/validation.js';
 import { logger } from '@core/logger/index.js';
+
+const MEMORY_TOOL_NAMES = [
+	'cipher_extract_and_operate_memory',
+	'cipher_memory_search',
+	'cipher_store_reasoning_memory',
+	'cipher_search_reasoning_patterns',
+	'cipher_workspace_search',
+	'cipher_workspace_store',
+] as const;
+
+interface MemoryToolInfo {
+	name: string;
+	description: string;
+	category: string;
+	source?: string;
+}
+
+interface ToolInventory {
+	tools: MemoryToolInfo[];
+	unifiedTools?: Record<string, any>;
+	internalTools?: Record<string, any>;
+}
 
 export function createMemoryRoutes(agent: MemAgent): Router {
 	const router = Router();
+
+	const getUnifiedToolManager = () => agent.unifiedToolManager;
+
+	const getInternalToolManager = () =>
+		agent.internalToolManager ?? agent.services?.internalToolManager;
+
+	const getDefaultSessionId = (): string | undefined => {
+		if (typeof agent.getCurrentActiveSessionId === 'function') {
+			return agent.getCurrentActiveSessionId();
+		}
+
+		if (typeof agent.getCurrentSessionId === 'function') {
+			return agent.getCurrentSessionId();
+		}
+
+		return undefined;
+	};
+
+	const resolveSessionId = async (
+		requestedSessionId?: string
+	): Promise<{ resolvedSessionId?: string; notFound: boolean }> => {
+		if (!requestedSessionId) {
+			return {
+				resolvedSessionId: getDefaultSessionId(),
+				notFound: false,
+			};
+		}
+
+		const session = await agent.getSession(requestedSessionId);
+		if (!session) {
+			return {
+				resolvedSessionId: undefined,
+				notFound: true,
+			};
+		}
+
+		return { resolvedSessionId: session.id, notFound: false };
+	};
+
+	const fetchMemoryTools = async (): Promise<ToolInventory> => {
+		const unifiedManager = getUnifiedToolManager();
+		const internalManager = getInternalToolManager();
+
+		let unifiedTools: Record<string, any> | undefined;
+		if (unifiedManager && typeof unifiedManager.getAllTools === 'function') {
+			try {
+				unifiedTools = await unifiedManager.getAllTools();
+			} catch (error) {
+				logger.warn('Failed to load memory tools from unified tool manager', {
+					error: error instanceof Error ? error.message : String(error),
+				});
+			}
+		}
+
+		let internalTools: Record<string, any> | undefined;
+		if (internalManager && typeof internalManager.getAllTools === 'function') {
+			try {
+				internalTools = internalManager.getAllTools();
+			} catch (error) {
+				logger.warn('Failed to load memory tools from internal tool manager', {
+					error: error instanceof Error ? error.message : String(error),
+				});
+			}
+		}
+
+		const collected = new Map<string, MemoryToolInfo>();
+
+		for (const name of MEMORY_TOOL_NAMES) {
+			const tool = unifiedTools?.[name];
+			if (tool) {
+				collected.set(name, {
+					name,
+					description: tool.description ?? '',
+					category: 'memory',
+					source: tool.source ?? 'internal',
+				});
+			}
+		}
+
+		if (internalTools) {
+			for (const name of MEMORY_TOOL_NAMES) {
+				const tool = internalTools[name];
+				if (!tool) continue;
+
+				if (!collected.has(name)) {
+					collected.set(name, {
+						name,
+						description: tool.description ?? '',
+						category: tool.category ?? 'memory',
+						source: 'internal',
+					});
+				} else {
+					const existing = collected.get(name)!;
+					if (!existing.description && tool.description) {
+						existing.description = tool.description;
+					}
+					if (!existing.source) {
+						existing.source = 'internal';
+					}
+				}
+			}
+		}
+
+		return {
+			tools: Array.from(collected.values()),
+			unifiedTools,
+			internalTools,
+		};
+	};
+
+	const hasInternalTool = (
+		toolName: string,
+		inventory?: ToolInventory
+	): boolean => {
+		if (inventory?.internalTools && inventory.internalTools[toolName]) {
+			return true;
+		}
+
+		const manager = getInternalToolManager();
+		if (!manager || typeof manager.getTool !== 'function') {
+			return false;
+		}
+
+		try {
+			return !!manager.getTool(toolName);
+		} catch (error) {
+			logger.warn(`Internal tool lookup failed for ${toolName}`, {
+				error: error instanceof Error ? error.message : String(error),
+			});
+			return false;
+		}
+	};
+
+	const isToolAvailable = async (
+		toolName: string,
+		inventory?: ToolInventory
+	): Promise<boolean> => {
+		const snapshot = inventory ?? (await fetchMemoryTools());
+
+		if (snapshot.unifiedTools && toolName in snapshot.unifiedTools) {
+			return true;
+		}
+
+		if (hasInternalTool(toolName, snapshot)) {
+			return true;
+		}
+
+		const toolManager = getUnifiedToolManager();
+		if (toolManager && typeof toolManager.isToolAvailable === 'function') {
+			try {
+				const available = await toolManager.isToolAvailable(toolName);
+				if (available) {
+					return true;
+				}
+			} catch (error) {
+				logger.warn(`Unified tool availability check failed for ${toolName}`, {
+					error: error instanceof Error ? error.message : String(error),
+				});
+			}
+		}
+
+		return hasInternalTool(toolName, snapshot);
+	};
+
+	const normalizeSearchResult = (
+		result: any,
+		query: string,
+		limit: number
+	) => {
+		if (!result) {
+			return {
+				success: false,
+				query,
+				results: [],
+				count: 0,
+				limit,
+				metadata: null,
+				timestamp: new Date().toISOString(),
+			};
+		}
+
+		const resultsArray = Array.isArray(result?.results)
+			? result.results
+			: Array.isArray(result)
+			? result
+			: result?.result
+			? Array.isArray(result.result)
+				? result.result
+				: [result.result]
+			: [];
+
+		return {
+			success: result?.success ?? true,
+			query: result?.query ?? query,
+			results: resultsArray,
+			count: resultsArray.length,
+			limit,
+			metadata: result?.metadata ?? null,
+			timestamp: result?.timestamp ?? new Date().toISOString(),
+		};
+	};
 
 	/**
 	 * GET /memory
@@ -20,14 +242,40 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 	router.get('/', async (req: Request, res: Response) => {
 		try {
 			const vectorStorage = agent.services.vectorStorage;
+			const vectorStoreManager = agent.services.vectorStoreManager;
+			const vectorInfo =
+				vectorStoreManager && typeof vectorStoreManager.getInfo === 'function'
+					? vectorStoreManager.getInfo()
+					: undefined;
+			const inventory = await fetchMemoryTools();
+			const embeddingManager = agent.services.embeddingManager;
+			const embeddingEnabled = typeof embeddingManager?.isReady === 'function'
+				? embeddingManager.isReady()
+				: typeof embeddingManager?.hasAvailableEmbeddings === 'function'
+				? embeddingManager.hasAvailableEmbeddings()
+				: !!embeddingManager;
+
 			const stats = {
 				vectorStorage: {
-					connected: !!vectorStorage,
-					type: vectorStorage?.constructor.name || 'unknown',
+					connected: vectorInfo?.connected ?? !!vectorStorage,
+					type: vectorStorage?.constructor?.name || vectorInfo?.backend?.type || 'unknown',
+					...(vectorInfo && {
+						backend: {
+							type: vectorInfo.backend.type,
+							collection: vectorInfo.backend.collectionName,
+							dimension: vectorInfo.backend.dimension,
+							fallback: vectorInfo.backend.fallback,
+						},
+					}),
 				},
 				memoryTools: {
-					available: true,
-					embeddingEnabled: agent.services.embeddingManager?.isReady() || false,
+					available: inventory.tools.length > 0,
+					count: inventory.tools.length,
+					embeddingEnabled,
+					tools: inventory.tools.map(tool => ({
+						name: tool.name,
+						source: tool.source ?? 'internal',
+					})),
 				},
 				timestamp: new Date().toISOString(),
 			};
@@ -44,7 +292,7 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 				ERROR_CODES.INTERNAL_ERROR,
 				'Failed to retrieve memory status',
 				500,
-				undefined,
+				(error instanceof Error ? { message: error.message } : String(error)),
 				req.requestId
 			);
 		}
@@ -69,13 +317,34 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 				);
 			}
 
-			// Use the agent's internal memory search tool
-			const session = sessionId ? agent.getSession(sessionId) : null;
-			const toolRegistry = agent.services.toolRegistry;
+			const toolManager = getUnifiedToolManager();
+			if (!toolManager || typeof toolManager.executeTool !== 'function') {
+				return errorResponse(
+					res,
+					ERROR_CODES.INTERNAL_ERROR,
+					'Unified tool manager is not available',
+					503,
+					undefined,
+					req.requestId
+				);
+			}
 
-			// Get the memory search tool
-			const searchTool = await toolRegistry.getTool('cipher_memory_search');
-			if (!searchTool) {
+			const { resolvedSessionId, notFound } = await resolveSessionId(sessionId);
+			if (sessionId && notFound) {
+				return errorResponse(
+					res,
+					ERROR_CODES.SESSION_NOT_FOUND,
+					`Session not found: ${sessionId}`,
+					404,
+					undefined,
+					req.requestId
+				);
+			}
+
+			const inventory = await fetchMemoryTools();
+			const topK = Math.min(Number(limit) || 10, 50);
+			const toolAvailable = await isToolAvailable('cipher_memory_search', inventory);
+			if (!toolAvailable) {
 				return errorResponse(
 					res,
 					ERROR_CODES.NOT_FOUND,
@@ -86,26 +355,19 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 				);
 			}
 
-			// Execute the search
-			const result = await searchTool.execute({
-				query,
-				limit: Math.min(limit, 50), // Cap at 50 results
-			}, session);
-
-			const memories = Array.isArray(result) ? result : [result];
-
-			successResponse(
-				res,
+			const result = await toolManager.executeTool(
+				'cipher_memory_search',
 				{
 					query,
-					results: memories,
-					count: memories.length,
-					limit,
-					timestamp: new Date().toISOString(),
+					top_k: topK,
+					limit: topK,
 				},
-				200,
-				req.requestId
+				resolvedSessionId
 			);
+
+			const normalized = normalizeSearchResult(result, query, topK);
+
+			successResponse(res, normalized, 200, req.requestId);
 		} catch (error) {
 			logger.error('Memory search failed', {
 				requestId: req.requestId,
@@ -130,7 +392,14 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 	 */
 	router.post('/store', async (req: Request, res: Response) => {
 		try {
-			const { content, type = 'knowledge', sessionId, metadata = {} } = req.body;
+			const {
+				content,
+				type = 'knowledge',
+				sessionId,
+				metadata = {},
+				options: optionsInput,
+				knowledgeInfo,
+			} = req.body;
 
 			if (!content || typeof content !== 'string') {
 				return errorResponse(
@@ -143,13 +412,93 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 				);
 			}
 
-			// Use the agent's internal memory operation tool
-			const session = sessionId ? agent.getSession(sessionId) : null;
-			const toolRegistry = agent.services.toolRegistry;
+			if (metadata && (typeof metadata !== 'object' || Array.isArray(metadata))) {
+				return errorResponse(
+					res,
+					ERROR_CODES.VALIDATION_ERROR,
+					'Metadata must be an object',
+					400,
+					undefined,
+					req.requestId
+				);
+			}
 
-			// Get the extract and operate memory tool
-			const memoryTool = await toolRegistry.getTool('cipher_extract_and_operate_memory');
-			if (!memoryTool) {
+			if (
+				optionsInput !== undefined &&
+				(typeof optionsInput !== 'object' || Array.isArray(optionsInput))
+			) {
+				return errorResponse(
+					res,
+					ERROR_CODES.VALIDATION_ERROR,
+					'Options must be an object when provided',
+					400,
+					undefined,
+					req.requestId
+				);
+			}
+
+			if (
+				knowledgeInfo !== undefined &&
+				(typeof knowledgeInfo !== 'object' || Array.isArray(knowledgeInfo))
+			) {
+				return errorResponse(
+					res,
+					ERROR_CODES.VALIDATION_ERROR,
+					'knowledgeInfo must be an object when provided',
+					400,
+					undefined,
+					req.requestId
+				);
+			}
+
+			const toolManager = getUnifiedToolManager();
+			if (!toolManager || typeof toolManager.executeTool !== 'function') {
+				return errorResponse(
+					res,
+					ERROR_CODES.INTERNAL_ERROR,
+					'Unified tool manager is not available',
+					503,
+					undefined,
+					req.requestId
+				);
+			}
+
+			const baseMetadata: Record<string, any> =
+				typeof metadata === 'object' && !Array.isArray(metadata) ? { ...metadata } : {};
+			baseMetadata.source = baseMetadata.source ?? 'api';
+			if (type && !baseMetadata.memoryType) {
+				baseMetadata.memoryType = type;
+			}
+
+			const optionsPayload =
+				typeof optionsInput === 'object' && optionsInput && !Array.isArray(optionsInput)
+					? { ...optionsInput }
+					: undefined;
+
+			const knowledgeInfoPayload =
+				typeof knowledgeInfo === 'object' && knowledgeInfo && !Array.isArray(knowledgeInfo)
+					? { ...knowledgeInfo }
+					: undefined;
+
+			const { resolvedSessionId, notFound } = await resolveSessionId(sessionId);
+			if (sessionId && notFound) {
+				return errorResponse(
+					res,
+					ERROR_CODES.SESSION_NOT_FOUND,
+					`Session not found: ${sessionId}`,
+					404,
+					undefined,
+					req.requestId
+				);
+			}
+
+			if (resolvedSessionId) {
+				baseMetadata.sourceSessionId = resolvedSessionId;
+			}
+
+			const inventory = await fetchMemoryTools();
+			const toolAvailable = await isToolAvailable('cipher_extract_and_operate_memory', inventory);
+			if (!toolAvailable) {
 				return errorResponse(
 					res,
 					ERROR_CODES.NOT_FOUND,
@@ -160,13 +509,25 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 				);
 			}
 
-			// Execute the memory operation
-			const result = await memoryTool.execute({
-				content,
-				operation: 'ADD',
-				type,
-				metadata: JSON.stringify(metadata),
-			}, session);
+			const toolArgs: Record<string, any> = {
+				interaction: content,
+				memoryMetadata: baseMetadata,
+			};
+			if (resolvedSessionId) {
+				toolArgs.context = { sessionId: resolvedSessionId };
+			}
+			if (knowledgeInfoPayload && Object.keys(knowledgeInfoPayload).length > 0) {
+				toolArgs.knowledgeInfo = knowledgeInfoPayload;
+			}
+			if (optionsPayload && Object.keys(optionsPayload).length > 0) {
+				toolArgs.options = optionsPayload;
+			}
+
+			const result = await toolManager.executeTool(
+				'cipher_extract_and_operate_memory',
+				toolArgs,
+				resolvedSessionId
+			);
 
 			successResponse(
 				res,
@@ -219,13 +580,33 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 				);
 			}
 
-			// Use the agent's reasoning memory tool
-			const session = sessionId ? agent.getSession(sessionId) : null;
-			const toolRegistry = agent.services.toolRegistry;
+			const toolManager = getUnifiedToolManager();
+			if (!toolManager || typeof toolManager.executeTool !== 'function') {
+				return errorResponse(
+					res,
+					ERROR_CODES.INTERNAL_ERROR,
+					'Unified tool manager is not available',
+					503,
+					undefined,
+					req.requestId
+				);
+			}
 
-			// Get the reasoning memory tool
-			const reasoningTool = await toolRegistry.getTool('cipher_store_reasoning_memory');
-			if (!reasoningTool) {
+			const { resolvedSessionId, notFound } = await resolveSessionId(sessionId);
+			if (sessionId && notFound) {
+				return errorResponse(
+					res,
+					ERROR_CODES.SESSION_NOT_FOUND,
+					`Session not found: ${sessionId}`,
+					404,
+					undefined,
+					req.requestId
+				);
+			}
+
+			const inventory = await fetchMemoryTools();
+			const toolAvailable = await isToolAvailable('cipher_store_reasoning_memory', inventory);
+			if (!toolAvailable) {
 				return errorResponse(
 					res,
 					ERROR_CODES.NOT_FOUND,
@@ -236,12 +617,15 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 				);
 			}
 
-			// Execute the reasoning storage
-			const result = await reasoningTool.execute({
-				reasoning,
-				quality,
-				metadata: JSON.stringify(metadata),
-			}, session);
+			const result = await toolManager.executeTool(
+				'cipher_store_reasoning_memory',
+				{
+					reasoning,
+					quality,
+					metadata: JSON.stringify(metadata),
+				},
+				resolvedSessionId
+			);
 
 			successResponse(
 				res,
@@ -294,13 +678,37 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 				);
 			}
 
-			// Use the agent's reasoning search tool
-			const session = sessionId ? agent.getSession(sessionId) : null;
-			const toolRegistry = agent.services.toolRegistry;
+			const toolManager = getUnifiedToolManager();
+			if (!toolManager || typeof toolManager.executeTool !== 'function') {
+				return errorResponse(
+					res,
+					ERROR_CODES.INTERNAL_ERROR,
+					'Unified tool manager is not available',
+					503,
+					undefined,
+					req.requestId
+				);
+			}
 
-			// Get the reasoning search tool
-			const searchTool = await toolRegistry.getTool('cipher_search_reasoning_patterns');
-			if (!searchTool) {
+			const { resolvedSessionId, notFound } = await resolveSessionId(sessionId);
+			if (sessionId && notFound) {
+				return errorResponse(
+					res,
+					ERROR_CODES.SESSION_NOT_FOUND,
+					`Session not found: ${sessionId}`,
+					404,
+					undefined,
+					req.requestId
+				);
+			}
+
+			const inventory = await fetchMemoryTools();
+			const topK = Math.min(Number(limit) || 10, 50);
+			const toolAvailable = await isToolAvailable(
+				'cipher_search_reasoning_patterns',
+				inventory
+			);
+			if (!toolAvailable) {
 				return errorResponse(
 					res,
 					ERROR_CODES.NOT_FOUND,
@@ -311,26 +719,19 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 				);
 			}
 
-			// Execute the search
-			const result = await searchTool.execute({
-				query,
-				limit: Math.min(limit, 50), // Cap at 50 results
-			}, session);
-
-			const patterns = Array.isArray(result) ? result : [result];
-
-			successResponse(
-				res,
+			const result = await toolManager.executeTool(
+				'cipher_search_reasoning_patterns',
 				{
 					query,
-					patterns,
-					count: patterns.length,
-					limit,
-					timestamp: new Date().toISOString(),
+					top_k: topK,
+					limit: topK,
 				},
-				200,
-				req.requestId
+				resolvedSessionId
 			);
+
+			const normalized = normalizeSearchResult(result, query, topK);
+
+			successResponse(res, normalized, 200, req.requestId);
 		} catch (error) {
 			logger.error('Reasoning search failed', {
 				requestId: req.requestId,
@@ -355,36 +756,20 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 	 */
 	router.get('/tools', async (req: Request, res: Response) => {
 		try {
-			const toolRegistry = agent.services.toolRegistry;
-			const memoryToolNames = [
-				'cipher_extract_and_operate_memory',
-				'cipher_memory_search',
-				'cipher_store_reasoning_memory',
-				'cipher_search_reasoning_patterns',
-				'cipher_workspace_search',
-				'cipher_workspace_store',
-			];
-
-			const availableTools = [];
-
-			for (const toolName of memoryToolNames) {
-				const tool = await toolRegistry.getTool(toolName);
-				if (tool) {
-					availableTools.push({
-						name: toolName,
-						description: tool.description,
-						category: 'memory',
-						available: true,
-					});
-				}
-			}
+			const { tools: availableTools } = await fetchMemoryTools();
+			const embeddingManager = agent.services.embeddingManager;
+			const embeddingEnabled = typeof embeddingManager?.isReady === 'function'
+				? embeddingManager.isReady()
+				: typeof embeddingManager?.hasAvailableEmbeddings === 'function'
+				? embeddingManager.hasAvailableEmbeddings()
+				: !!embeddingManager;
 
 			successResponse(
 				res,
 				{
 					tools: availableTools,
 					count: availableTools.length,
-					embeddingEnabled: agent.services.embeddingManager?.isReady() || false,
+					embeddingEnabled,
 					timestamp: new Date().toISOString(),
 				},
 				200,
@@ -409,3 +794,8 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 
 	return router;
 }
+
+
+
+
+
