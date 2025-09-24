@@ -507,8 +507,8 @@ export class ApiServer {
 
 		// Rate limiting
 		const limiter = rateLimit({
-			windowMs: this.config.rateLimitWindowMs || 15 * 60 * 1000, // 15 minutes
-			max: this.config.rateLimitMaxRequests || 100, // limit each IP to 100 requests per windowMs
+			windowMs: this.config.rateLimitWindowMs || 5 * 60 * 1000, // 5-minute window (can be overridden via config/env)
+			max: this.config.rateLimitMaxRequests || 1000, // limit each IP to 1000 requests per windowMs
 			message: {
 				success: false,
 				error: {
@@ -873,3 +873,4 @@ export class ApiServer {
 		return !!(this.config.enableWebSocket && this.wss && this.wsEventSubscriber?.isActive());
 	}
 }
+

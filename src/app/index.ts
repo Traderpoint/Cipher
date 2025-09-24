@@ -335,6 +335,21 @@ program
 			}
 		}
 
+		const resolveRateLimitOptions = () => {
+			const defaultWindowMs = 5 * 60 * 1000;
+			const defaultMaxRequests = 1000;
+
+			const windowOverride = Number(process.env.CIPHER_RATE_LIMIT_WINDOW_MS);
+			const maxOverride = Number(process.env.CIPHER_RATE_LIMIT_MAX_REQUESTS);
+
+			const rateLimitWindowMs =
+				Number.isFinite(windowOverride) && windowOverride > 0 ? windowOverride : defaultWindowMs;
+			const rateLimitMaxRequests =
+				Number.isFinite(maxOverride) && maxOverride > 0 ? maxOverride : defaultMaxRequests;
+
+			return { rateLimitWindowMs, rateLimitMaxRequests };
+		};
+
 		/**
 		 * Start the API server mode
 		 */
@@ -351,14 +366,16 @@ program
 						: process.env.CIPHER_API_PREFIX
 					: options.apiPrefix;
 
+			const { rateLimitWindowMs, rateLimitMaxRequests } = resolveRateLimitOptions();
+
 			logger.info(`Starting API server on ${host}:${port}`, null, 'green');
 
 			const apiServer = new ApiServer(agent, {
 				port,
 				host,
 				corsOrigins: ['http://localhost:3000', 'http://localhost:3001'], // Default CORS origins
-				rateLimitWindowMs: 15 * 60 * 1000, // 15 minutes
-				rateLimitMaxRequests: 100, // 100 requests per window
+				rateLimitWindowMs: rateLimitWindowMs, // 5-minute window (overridable via env vars)
+				rateLimitMaxRequests: rateLimitMaxRequests, // up to 1000 requests per window
 				// Enable WebSocket by default for API mode
 				enableWebSocket: true,
 				webSocketConfig: {
@@ -404,6 +421,8 @@ program
 						: process.env.CIPHER_API_PREFIX
 					: options.apiPrefix;
 
+			const { rateLimitWindowMs, rateLimitMaxRequests } = resolveRateLimitOptions();
+
 			logger.info(
 				`Starting UI mode - API server on ${host}:${apiPort}, UI server on ${host}:${uiPort}`,
 				null,
@@ -415,8 +434,8 @@ program
 				port: apiPort,
 				host,
 				corsOrigins: [`http://${host}:${uiPort}`, `http://localhost:${uiPort}`], // Allow UI to connect
-				rateLimitWindowMs: 15 * 60 * 1000, // 15 minutes
-				rateLimitMaxRequests: 100, // 100 requests per window
+				rateLimitWindowMs: rateLimitWindowMs, // 5-minute window (overridable via env vars)
+				rateLimitMaxRequests: rateLimitMaxRequests, // up to 1000 requests per window
 				// Enable WebSocket by default for UI mode
 				enableWebSocket: true,
 				webSocketConfig: {
