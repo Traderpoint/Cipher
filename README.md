@@ -364,6 +364,7 @@ For detailed configuration instructions, see the [CLI Coding Agents guide](./exa
 | Topic                                                        | Description                                                                       |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
 | [API Reference](./docs/api-reference.md)                     | Complete REST API documentation for all 47 endpoints and WebSocket communication |
+| [Monitoring & Analytics](./docs/monitoring.md)               | System monitoring, performance analytics, error tracking, and health dashboards |
 | [Configuration](./docs/configuration.md)                     | Complete configuration guide including agent setup, embeddings, and vector stores |
 | [LLM Providers](./docs/llm-providers.md)                     | Detailed setup for OpenAI, Anthropic, AWS, Azure, Qwen, Ollama, LM Studio         |
 | [Embedding Configuration](./docs/embedding-configuration.md) | Embedding providers, fallback logic, and troubleshooting                          |
