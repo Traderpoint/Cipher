@@ -31,7 +31,7 @@ interface PooledConnection {
 export class MilvusConnectionPool {
 	private static instance: MilvusConnectionPool | null = null;
 	private connections: Map<string, PooledConnection> = new Map();
-	private readonly maxConnections = 10; // Prevent connection bloat
+	private readonly maxConnections = 20; // Increased to handle load
 	private readonly connectionTtl = 300000; // 5 minutes TTL
 	private readonly healthCheckInterval = 60000; // 1 minute health checks
 	private healthCheckTimer?: NodeJS.Timeout;

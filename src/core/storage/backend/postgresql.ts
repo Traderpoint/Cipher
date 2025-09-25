@@ -403,7 +403,7 @@ export class PostgresBackend implements DatabaseBackend {
 		if (this.config.url) {
 			return {
 				connectionString: this.config.url,
-				max: this.config.pool?.max || this.config.maxConnections || 10,
+				max: this.config.pool?.max || this.config.maxConnections || 20,
 				min: this.config.pool?.min || 2,
 				idleTimeoutMillis:
 					this.config.pool?.idleTimeoutMillis || this.config.idleTimeoutMillis || 30000,
@@ -420,7 +420,7 @@ export class PostgresBackend implements DatabaseBackend {
 			database: this.config.database,
 			user: this.config.user,
 			password: this.config.password,
-			max: this.config.pool?.max || this.config.maxConnections || 10,
+			max: this.config.pool?.max || this.config.maxConnections || 20,
 			min: this.config.pool?.min || 2,
 			idleTimeoutMillis:
 				this.config.pool?.idleTimeoutMillis || this.config.idleTimeoutMillis || 30000,

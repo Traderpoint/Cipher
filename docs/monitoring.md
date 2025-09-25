@@ -9,6 +9,8 @@ Cipher obsahuje komplexní monitorovací systém pro sledování výkonu, chyb a
 - WebSocket connection tracking
 - API endpoint performance
 - Session management statistiky
+- **Connection Pool Monitoring**: PostgreSQL a vector storage connection pools
+- **Performance Thresholds**: Real-time performance alerts and warnings
 
 ### 🤖 **LLM Performance Monitoring**
 - Response time tracking pro všechny LLM providery

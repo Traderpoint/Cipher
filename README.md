@@ -374,6 +374,7 @@ For detailed configuration instructions, see the [CLI Coding Agents guide](./exa
 | [MCP Integration](./docs/mcp-integration.md)                 | Advanced MCP server setup, aggregator mode, and IDE integrations                  |
 | [Claude Code Integration](./docs/claude-code-integration-navod.md) | Kompletní návod na propojení Cipher s Claude Code přes MCP |
 | [Workspace Memory](./docs/workspace-memory.md)               | Team-aware memory system for collaborative development                            |
+| [Performance Optimization](./docs/performance-optimization.md) | Connection pooling, memory management, and performance tuning guide              |
 | [Examples](./docs/examples.md)                               | Real-world integration examples and use cases                                     |
 
 ###  Next Steps
