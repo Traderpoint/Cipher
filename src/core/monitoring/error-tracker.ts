@@ -32,11 +32,26 @@ export class ErrorTracker {
 	private errorCounts: Record<string, number> = {};
 	private errorRates: Record<string, { count: number; window: number }> = {};
 
+	// Memory optimization: use circular buffer for recent errors
+	private recentErrors: ErrorInfo[] = [];
+	private recentErrorsIndex = 0;
+	private maxRecentErrors = 200; // Keep only 200 most recent errors in fast access buffer
+
+	// Compressed error summaries for long-term storage
+	private errorSummaries: Map<string, {
+		hourly: Map<string, { count: number; types: Record<string, number> }>;
+		daily: Map<string, { count: number; types: Record<string, number> }>;
+	}> = new Map();
+
 	private constructor() {
 		// Clean up old errors periodically
 		setInterval(() => {
 			this.cleanupOldErrors();
+			this.compressOldErrors();
 		}, 300000); // Every 5 minutes
+
+		// Initialize recent errors buffer
+		this.recentErrors = new Array(this.maxRecentErrors).fill(null);
 	}
 
 	static getInstance(): ErrorTracker {
@@ -69,6 +84,13 @@ export class ErrorTracker {
 
 		// Store error
 		this.errors.set(errorId, errorInfo);
+
+		// Add to recent errors circular buffer for fast access
+		this.recentErrors[this.recentErrorsIndex] = errorInfo;
+		this.recentErrorsIndex = (this.recentErrorsIndex + 1) % this.maxRecentErrors;
+
+		// Update compressed summaries
+		this.updateErrorSummaries(errorInfo);
 
 		// Update counters
 		const errorKey = `${type}:${errorMessage}`;
@@ -169,22 +191,43 @@ export class ErrorTracker {
 	 * Get recent errors
 	 */
 	getRecentErrors(limit: number = 100, type?: ErrorInfo['type'], severity?: ErrorInfo['severity']): ErrorInfo[] {
-		let errors = Array.from(this.errors.values());
+		// Use circular buffer for better performance
+		const recentValid = this.recentErrors.filter(error => error !== null) as ErrorInfo[];
 
-		// Filter by type if specified
+		// Sort by timestamp (most recent first)
+		const sorted = recentValid.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+		let filtered = sorted;
+
 		if (type) {
-			errors = errors.filter(error => error.type === type);
+			filtered = filtered.filter(error => error.type === type);
 		}
 
-		// Filter by severity if specified
 		if (severity) {
-			errors = errors.filter(error => error.severity === severity);
+			filtered = filtered.filter(error => error.severity === severity);
 		}
 
-		// Sort by timestamp (newest first) and limit
-		return errors
-			.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-			.slice(0, limit);
+		// If we need more errors than available in recent buffer, fall back to full search
+		if (filtered.length < limit && limit > this.maxRecentErrors) {
+			let errors = Array.from(this.errors.values());
+
+			// Filter by type if specified
+			if (type) {
+				errors = errors.filter(error => error.type === type);
+			}
+
+			// Filter by severity if specified
+			if (severity) {
+				errors = errors.filter(error => error.severity === severity);
+			}
+
+			// Sort by timestamp (newest first) and limit
+			return errors
+				.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+				.slice(0, limit);
+		}
+
+		return filtered.slice(0, limit);
 	}
 
 	/**
@@ -419,6 +462,162 @@ export class ErrorTracker {
 				context: errorInfo.context
 			});
 		}
+	}
+
+	/**
+	 * Update compressed error summaries for memory efficiency
+	 */
+	private updateErrorSummaries(error: ErrorInfo): void {
+		const hourKey = error.timestamp.toISOString().substring(0, 13); // YYYY-MM-DDTHH
+		const dayKey = error.timestamp.toISOString().substring(0, 10); // YYYY-MM-DD
+
+		// Initialize if not exists
+		if (!this.errorSummaries.has(error.type)) {
+			this.errorSummaries.set(error.type, {
+				hourly: new Map(),
+				daily: new Map()
+			});
+		}
+
+		const summaries = this.errorSummaries.get(error.type)!;
+
+		// Update hourly summary
+		if (!summaries.hourly.has(hourKey)) {
+			summaries.hourly.set(hourKey, { count: 0, types: {} });
+		}
+		const hourlySummary = summaries.hourly.get(hourKey)!;
+		hourlySummary.count++;
+		hourlySummary.types[error.severity] = (hourlySummary.types[error.severity] || 0) + 1;
+
+		// Update daily summary
+		if (!summaries.daily.has(dayKey)) {
+			summaries.daily.set(dayKey, { count: 0, types: {} });
+		}
+		const dailySummary = summaries.daily.get(dayKey)!;
+		dailySummary.count++;
+		dailySummary.types[error.severity] = (dailySummary.types[error.severity] || 0) + 1;
+
+		// Cleanup old summaries (keep only last 7 days of hourly, 30 days of daily)
+		const now = new Date();
+		const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+		const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+		// Cleanup hourly summaries older than 7 days
+		for (const [key] of summaries.hourly) {
+			const keyDate = new Date(key + ':00:00Z');
+			if (keyDate < sevenDaysAgo) {
+				summaries.hourly.delete(key);
+			}
+		}
+
+		// Cleanup daily summaries older than 30 days
+		for (const [key] of summaries.daily) {
+			const keyDate = new Date(key + 'T00:00:00Z');
+			if (keyDate < thirtyDaysAgo) {
+				summaries.daily.delete(key);
+			}
+		}
+	}
+
+	/**
+	 * Compress old errors to save memory
+	 */
+	private compressOldErrors(): void {
+		const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours ago
+		const errorsToCompress: string[] = [];
+
+		// Find errors older than cutoff
+		for (const [errorId, error] of this.errors) {
+			if (error.timestamp < cutoffTime && !error.resolved) {
+				errorsToCompress.push(errorId);
+			}
+		}
+
+		// Remove compressed errors from main storage (they're already in summaries)
+		for (const errorId of errorsToCompress.slice(0, Math.max(0, errorsToCompress.length - 100))) {
+			this.errors.delete(errorId);
+		}
+
+		if (errorsToCompress.length > 100) {
+			logger.debug('Compressed old errors', {
+				compressedCount: errorsToCompress.length - 100,
+				totalErrors: this.errors.size
+			});
+		}
+	}
+
+	/**
+	 * Get compressed error summaries
+	 */
+	getErrorSummaries(days: number = 7): {
+		hourly: Record<string, { count: number; types: Record<string, number> }>;
+		daily: Record<string, { count: number; types: Record<string, number> }>;
+	} {
+		const result = {
+			hourly: {} as Record<string, { count: number; types: Record<string, number> }>,
+			daily: {} as Record<string, { count: number; types: Record<string, number> }>
+		};
+
+		const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+		// Aggregate from all error types
+		for (const [errorType, summaries] of this.errorSummaries) {
+			// Hourly data
+			for (const [hourKey, summary] of summaries.hourly) {
+				const keyDate = new Date(hourKey + ':00:00Z');
+				if (keyDate >= cutoff) {
+					if (!result.hourly[hourKey]) {
+						result.hourly[hourKey] = { count: 0, types: {} };
+					}
+					result.hourly[hourKey].count += summary.count;
+					for (const [type, count] of Object.entries(summary.types)) {
+						result.hourly[hourKey].types[type] = (result.hourly[hourKey].types[type] || 0) + count;
+					}
+				}
+			}
+
+			// Daily data
+			for (const [dayKey, summary] of summaries.daily) {
+				const keyDate = new Date(dayKey + 'T00:00:00Z');
+				if (keyDate >= cutoff) {
+					if (!result.daily[dayKey]) {
+						result.daily[dayKey] = { count: 0, types: {} };
+					}
+					result.daily[dayKey].count += summary.count;
+					for (const [type, count] of Object.entries(summary.types)) {
+						result.daily[dayKey].types[type] = (result.daily[dayKey].types[type] || 0) + count;
+					}
+				}
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * Get memory usage statistics
+	 */
+	getMemoryStats(): {
+		totalErrors: number;
+		recentErrorsBuffer: number;
+		summariesCount: number;
+		estimatedMemoryUsage: number; // in bytes
+	} {
+		let summariesCount = 0;
+		for (const summaries of this.errorSummaries.values()) {
+			summariesCount += summaries.hourly.size + summaries.daily.size;
+		}
+
+		// Rough estimation of memory usage
+		const errorSize = 500; // bytes per error (rough estimate)
+		const summarySize = 100; // bytes per summary (rough estimate)
+
+		return {
+			totalErrors: this.errors.size,
+			recentErrorsBuffer: this.recentErrors.filter(e => e !== null).length,
+			summariesCount,
+			estimatedMemoryUsage: (this.errors.size * errorSize) + (summariesCount * summarySize)
+		};
 	}
 }
 

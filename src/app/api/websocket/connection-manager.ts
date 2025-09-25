@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@core/logger/index.js';
+import { WebSocketTracker } from '@core/monitoring/middleware.js';
 import {
 	WebSocketConnection,
 	WebSocketResponse,
@@ -12,6 +13,7 @@ export class WebSocketConnectionManager {
 	private connections = new Map<string, WebSocketConnection>();
 	private sessionConnections = new Map<string, Set<string>>();
 	private connectionSessions = new Map<string, string>();
+	private wsTrackers = new Map<string, WebSocketTracker>();
 	private stats = {
 		totalMessagesReceived: 0,
 		totalMessagesSent: 0,
@@ -65,6 +67,10 @@ export class WebSocketConnectionManager {
 		this.connectionSessions.set(connectionId, sessionId || '');
 		this.stats.connectionsCreated++;
 
+		// Create WebSocket tracker for monitoring
+		const wsTracker = new WebSocketTracker(connectionId);
+		this.wsTrackers.set(connectionId, wsTracker);
+
 		if (sessionId) {
 			this.bindToSession(connectionId, sessionId);
 		}
@@ -104,6 +110,13 @@ export class WebSocketConnectionManager {
 		// Clean up mappings
 		this.connections.delete(connectionId);
 		this.connectionSessions.delete(connectionId);
+
+		// Clean up WebSocket tracker
+		const wsTracker = this.wsTrackers.get(connectionId);
+		if (wsTracker) {
+			wsTracker.trackDisconnection();
+			this.wsTrackers.delete(connectionId);
+		}
 
 		// Close WebSocket if still open
 		if (connection.ws.readyState === WebSocket.OPEN) {
@@ -380,7 +393,13 @@ export class WebSocketConnectionManager {
 	 * Set up WebSocket event handlers for a connection
 	 */
 	private setupConnectionHandlers(connection: WebSocketConnection): void {
+		const wsTracker = this.wsTrackers.get(connection.id);
+
 		connection.ws.on('close', () => {
+			// Track disconnection before removing
+			if (wsTracker) {
+				wsTracker.trackDisconnection();
+			}
 			this.removeConnection(connection.id);
 		});
 
@@ -389,6 +408,11 @@ export class WebSocketConnectionManager {
 				connectionId: connection.id,
 				error: error.message,
 			});
+
+			// Track WebSocket error
+			if (wsTracker) {
+				wsTracker.trackError();
+			}
 			this.removeConnection(connection.id);
 		});
 

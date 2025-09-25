@@ -2,10 +2,16 @@
 export { MetricsCollector, metricsCollector } from './metrics-collector.js';
 export { LLMPerformanceTracker, llmPerformanceTracker } from './llm-performance-tracker.js';
 export { ErrorTracker, errorTracker } from './error-tracker.js';
+export { AlertManager, alertManager } from './alert-manager.js';
+export { MonitoringWebSocketNotifier, wsNotifier } from './websocket-notifier.js';
+export { DashboardManager, dashboardManager } from './dashboard-manager.js';
+export { MetricsBatchProcessor, metricsBatchProcessor } from './batch-processor.js';
 
 // Import instances for internal use
 import { metricsCollector } from './metrics-collector.js';
 import { errorTracker } from './error-tracker.js';
+import { alertManager } from './alert-manager.js';
+import { dashboardManager } from './dashboard-manager.js';
 
 // Middleware exports
 export {
@@ -46,6 +52,12 @@ export class MonitoringIntegration {
 	static initialize(): void {
 		// Start metrics collection
 		metricsCollector.startCollection(30000);
+
+		// Start alert monitoring
+		alertManager.start(30000);
+
+		// Start dashboard data collection
+		dashboardManager.startDataCollection(60000);
 
 		console.log('✅ Cipher monitoring system initialized');
 	}
@@ -162,6 +174,8 @@ export class MonitoringIntegration {
 	 */
 	static shutdown(): void {
 		metricsCollector.stopCollection();
+		alertManager.stop();
+		dashboardManager.stopDataCollection();
 		console.log('✅ Monitoring system shut down');
 	}
 }

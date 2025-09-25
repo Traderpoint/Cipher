@@ -5,14 +5,14 @@
 <img src="./assets/cipher-logo.png" alt="Cipher Agent Logo" width="400" />
 
 <p align="center">
-<em>Memory-powered AI agent framework with MCP integration</em>
+<em>Framework AI agentů s pamětí a MCP integrací</em>
 </p>
 
 <p align="center">
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-Elastic%202.0-blue.svg" alt="License" /></a>
 <img src="https://img.shields.io/badge/Status-Beta-orange.svg" alt="Beta" />
-<a href="https://docs.byterover.dev/cipher/overview"><img src="https://img.shields.io/badge/Docs-Documentation-green.svg" alt="Documentation" /></a>
-<a href="https://discord.com/invite/UMRrpNjh5W"><img src="https://img.shields.io/badge/Discord-Join%20Community-7289da" alt="Discord" /></a>
+<a href="https://docs.byterover.dev/cipher/overview"><img src="https://img.shields.io/badge/Docs-Dokumentace-green.svg" alt="Dokumentace" /></a>
+<a href="https://discord.com/invite/UMRrpNjh5W"><img src="https://img.shields.io/badge/Discord-Připojit%20se-7289da" alt="Discord" /></a>
 </p>
 
 </div>
@@ -23,193 +23,193 @@
   </a>
 </div>
 
-## Overview
+## Přehled
 
-Byterover Cipher is an opensource memory layer specifically designed for coding agents. Compatible with **Cursor, Windsurf, Claude Code, Cline, Claude Desktop, Gemini CLI, AWS's Kiro, VS Code, Roo Code, Trae, Amp Code and Warp** through MCP, and coding agents, such as **Kimi K2**. (see more on [examples](./examples))
+Byterover Cipher je open-source paměťová vrstva speciálně navržená pro kódovací agenty. Kompatibilní s **Cursor, Windsurf, Claude Code, Cline, Claude Desktop, Gemini CLI, AWS Kiro, VS Code, Roo Code, Trae, Amp Code a Warp** prostřednictvím MCP, a kódovacími agenty jako **Kimi K2**. (více v [examples](./examples))
 
-Built by [Byterover team](https://byterover.dev/)
+Vyvinuto týmem [Byterover](https://byterover.dev/)
 
-**Key Features:**
+**Klíčové vlastnosti:**
 
-- MCP integration with any IDE you want.
-- Auto-generate AI coding memories that scale with your codebase.
-- Switch seamlessly between IDEs without losing memory and context.
-- Easily share coding memories across your dev team in real time.
-- Dual Memory Layer that captures System 1 (Programming Concepts & Business Logic & Past Interaction) and System 2 (reasoning steps of the model when generating code).
-- Install on your IDE with zero configuration needed.
+- MCP integrace s jakýmkoliv IDE dle vašeho výběru
+- Automatické generování AI kódovacích vzpomínek škálujících s vaší kódovou základnou
+- Bezproblémový přechod mezi IDE bez ztráty paměti a kontextu
+- Snadné sdílení kódovacích vzpomínek napříč vývojovým týmem v reálném čase
+- Duální paměťová vrstva zachycující Systém 1 (programovací koncepty, obchodní logiku a minulé interakce) a Systém 2 (kroky uvažování modelu při generování kódu)
+- Instalace do vašeho IDE s nulovou konfigurací
 
-## Quick Start
+## Rychlý start
 
-### NPM Package (Recommended for Most Users)
+### NPM balíček (doporučeno pro většinu uživatelů)
 
 ```bash
-# Install globally
+# Instalace globálně
 npm install -g @byterover/cipher
 
-# Or install locally in your project
+# Nebo lokální instalace v projektu
 npm install @byterover/cipher
 ```
 
 ### Docker
 
 <details>
-<summary>Show Docker Setup</summary>
+<summary>Zobrazit Docker konfiguraci</summary>
 
 ```bash
-# Clone and setup
+# Klonování a nastavení
 git clone https://github.com/campfirein/cipher.git
 cd cipher
 
-# Configure environment
+# Konfigurace prostředí
 cp .env.example .env
-# Edit .env with your API keys
+# Upravte .env s vašimi API klíči
 
-# Start with Docker
+# Spuštění s Dockerem
 docker-compose up --build -d
 
 # Test
 curl http://localhost:3000/health
 ```
 
-> **Note:** Docker builds automatically skip the UI build step to avoid ARM64 compatibility issues with lightningcss. The UI is not included in the Docker image by default.
+> **Poznámka:** Docker buildy automaticky přeskakují krok buildování UI pro zabránění kompatibilním problémům s lightningcss na ARM64. UI není ve výchozím nastavení zahrnuto do Docker obrazu.
 >
-> To include the UI in the Docker build, use: `docker build --build-arg BUILD_UI=true .`
+> Pro zahrnutí UI do Docker buildu použijte: `docker build --build-arg BUILD_UI=true .`
 
 </details>
 
-### From Source
+### Ze zdrojového kódu
 
 ```bash
 pnpm i && pnpm run build && npm link
 ```
 
-### Run the API server locally
+### Lokální spuštění API serveru
 
 ```bash
-# Build the distribution artifacts
+# Build distribučních artefaktů
 pnpm run build
 
-# Windows only: keep standalone UI assets when building
+# Pouze Windows: zachování standalone UI assetů při buildování
 FORCE_STANDALONE=true pnpm run build-ui
 
-# Start the API server on port 3001
+# Spuštění API serveru na portu 3001
 node dist/src/app/index.cjs --mode api --port 3001
 ```
 
-> **Note:** On Windows, run the build/start commands from an elevated PowerShell or enable Developer Mode so PNPM can create the symlinks Next.js expects.
+> **Poznámka:** Na Windows spouštějte build/start příkazy z elevated PowerShell nebo povolte Developer Mode, aby PNPM mohl vytvořit symlinky očekávané Next.js.
 
-Verify the deployment:
+Ověření nasazení:
 
 ```powershell
-# API server health check
+# Kontrola zdraví API serveru
 curl http://localhost:3001/api/sessions
 
-# Create a session (persists in PostgreSQL if configured)
+# Vytvoření relace (uložení do PostgreSQL pokud je nakonfigurováno)
 curl -X POST http://localhost:3001/api/sessions -H "Content-Type: application/json" -d '{"sessionId":"api-test"}'
 
-# Direct PostgreSQL check (inline password avoids prompts)
+# Přímá kontrola PostgreSQL (inline heslo zabrání výzvam)
 "C:/Program Files/PostgreSQL/17/bin/psql.exe" "postgresql://postgres:<password>@localhost:5432/cipher_db" -c "SELECT NOW();"
 ```
 
-If the API cannot reach PostgreSQL, the server log shows `Failed to connect to database backend`. Fix the credentials/service and rerun the commands above.
+Pokud se API nemůže připojit k PostgreSQL, log serveru zobrazí `Failed to connect to database backend`. Opravte údaje pro přihlášení/službu a spusťte příkazy znovu.
 
-### Port Configuration & Standalone UI
+### Konfigurace portů a Standalone UI
 
-By default, Cipher uses the following ports:
-- **API Server**: Port 3001 (backend services)
-- **UI Interface**: Port 3000 (web interface)
+Ve výchozím nastavení používá Cipher následující porty:
+- **API Server**: Port 3001 (backend služby)
+- **UI rozhraní**: Port 3000 (webové rozhraní)
 - **MCP Server**: Port 3002 (Model Context Protocol)
 
-#### Running Standalone UI Interface
+#### Spuštění Standalone UI rozhraní
 
-To run the standalone UI interface that connects to the API server:
+Pro spuštění samostatného UI rozhraní, které se připojuje k API serveru:
 
 ```bash
-# Start API server on port 3001
+# Spuštění API serveru na portu 3001
 node dist/src/app/index.cjs --mode api --port 3001
 
-# In another terminal, start standalone UI on port 3000
+# V dalším terminálu spuštění standalone UI na portu 3000
 cd src/app/ui
 PORT=3000 API_URL=http://localhost:3001 pnpm dev
 ```
 
-Access the interface at: http://localhost:3000
+Přístup k rozhraní: http://localhost:3000
 
-The UI includes a clickable logo in the header that returns users to the welcome screen at any time. The welcome screen provides quick access to core functionality and allows switching between different sessions.
+UI obsahuje klikatelné logo v záhlaví, které vrátí uživatele na úvodbí obrazovku kdykoli. Úvodní obrazovka poskytuje rychlý přístup k základním funkcím a umožňuje přepínání mezi různými relacemi.
 
-#### Running MCP Server
+#### Spuštění MCP serveru
 
 ```bash
-# Start MCP server with SSE transport on port 3002 (default)
+# Spuštění MCP serveru s SSE transportem na portu 3002 (výchozí)
 node dist/src/app/index.cjs --mode mcp --mcp-transport-type sse --mcp-port 3002
 ```
 
-#### All Services Running
+#### Všechny služby spuštěné
 
-For complete local development with all services:
+Pro kompletní lokální vývoj se všemi službami:
 
 ```bash
-# Terminal 1: API Server
+# Terminál 1: API Server
 node dist/src/app/index.cjs --mode api --port 3001
 
-# Terminal 2: Standalone UI
+# Terminál 2: Standalone UI
 cd src/app/ui && PORT=3000 API_URL=http://localhost:3001 pnpm dev
 
-# Terminal 3: MCP Server
+# Terminál 3: MCP Server
 node dist/src/app/index.cjs --mode mcp --mcp-transport-type sse --mcp-port 3002
 ```
-### CLI Usage
+### Používání CLI
 
 <details>
-<summary>Show CLI commands</summary>
+<summary>Zobrazit CLI příkazy</summary>
 
 ```bash
-# Interactive mode
+# Interaktivní režim
 cipher
 
-# One-shot command
-cipher "Add this to memory as common causes of 'CORS error' in local dev with Vite + Express."
+# Jednorázový příkaz
+cipher "Přidej toto do paměti jako běžné příčiny 'CORS error' v lokálním vývoji s Vite + Express."
 
-# API server mode
+# Režim API serveru
 cipher --mode api
 
-# MCP server mode
+# Režim MCP serveru
 cipher --mode mcp
 
-# Web UI mode
+# Režim webového UI
 cipher --mode ui
 ```
 
-> **Note:** When running MCP mode in terminal/shell, export all environment variables as Cipher won't read from `.env` file.
+> **Poznámka:** Při spouštění MCP režimu v terminálu/shellu exportujte všechny environment proměnné, protože Cipher nebude číst ze souboru `.env`.
 >
-> **Tip:** CLI mode automatically continues or creates the "default" session. Use `/session new <session-name>` to start a fresh session.
+> **Tip:** CLI režim automaticky pokračuje nebo vytváří "default" relaci. Použijte `/session new <session-name>` pro spuštění nové relace.
 
 </details>
 
 ![Cipher Web UI](./assets/cipher_webUI.png)
 
-_The Cipher Web UI provides an intuitive interface for interacting with memory-powered AI agents, featuring session management, tool integration, and real-time chat capabilities._
+_Cipher Web UI poskytuje intuitivní rozhraní pro interakci s AI agenty s pamětí, obsahující správu relací, integraci nástrojů a real-time chatovací schopnosti._
 
-## Configuration
+## Konfigurace
 
-Cipher supports multiple configuration options for different deployment scenarios. The main configuration file is located at `memAgent/cipher.yml`.
+Cipher podporuje více možností konfigurace pro různé scénáře nasazení. Hlavní konfigurační soubor se nachází v `memAgent/cipher.yml`.
 
-### Basic Configuration
+### Základní konfigurace
 
 <details>
-<summary>Show YAML example</summary>
+<summary>Zobrazit YAML příklad</summary>
 
 ```yaml
-# LLM Configuration
+# Konfigurace LLM
 llm:
   provider: openai # openai, anthropic, openrouter, ollama, qwen
   model: gpt-4-turbo
   apiKey: $OPENAI_API_KEY
 
-# System Prompt
-systemPrompt: 'You are a helpful AI assistant with memory capabilities.'
+# Systémový prompt
+systemPrompt: 'Jsi užitečný AI asistent s paměťovými schopnostmi.'
 
-# MCP Servers (optional)
+# MCP servery (volitelné)
 mcpServers:
   filesystem:
     type: stdio
@@ -219,18 +219,18 @@ mcpServers:
 
 </details>
 
- **See [Configuration Guide](./docs/configuration.md)** for complete details.
+ **Viz [Konfigurační průvodce](./docs/configuration.md)** pro kompletní detaily.
 
-### Environment Variables
+### Environment proměnné
 
-Create a `.env` file in your project root with these essential variables:
+Vytvořte soubor `.env` v root adresáři vašeho projektu s těmito základními proměnnými:
 
 <details>
-<summary>Show .env template</summary>
+<summary>Zobrazit .env šablonu</summary>
 
 ```bash
 # ====================
-# API Keys (At least one required)
+# API klíče (alespoň jeden je povinný)
 # ====================
 OPENAI_API_KEY=sk-your-openai-api-key
 ANTHROPIC_API_KEY=sk-ant-your-anthropic-key
@@ -238,48 +238,48 @@ GEMINI_API_KEY=your-gemini-api-key
 QWEN_API_KEY=your-qwen-api-key
 
 # ====================
-# Vector Store (Optional - defaults to in-memory)
+# Vector Store (volitelné - výchozí in-memory)
 # ====================
-VECTOR_STORE_TYPE=qdrant  # qdrant, milvus, or in-memory
+VECTOR_STORE_TYPE=qdrant  # qdrant, milvus, nebo in-memory
 VECTOR_STORE_URL=https://your-cluster.qdrant.io
 VECTOR_STORE_API_KEY=your-qdrant-api-key
 
 # ====================
-# Chat History (Optional - defaults to SQLite)
+# Historie chatu (volitelné - výchozí SQLite)
 # ====================
 CIPHER_PG_URL=postgresql://user:pass@localhost:5432/cipher_db
 
 # ====================
-# Workspace Memory (Optional)
+# Workspace paměť (volitelné)
 # ====================
 USE_WORKSPACE_MEMORY=true
 WORKSPACE_VECTOR_STORE_COLLECTION=workspace_memory
 
 # ====================
-# AWS Bedrock (Optional)
+# AWS Bedrock (volitelné)
 # ====================
 AWS_ACCESS_KEY_ID=your-aws-access-key
 AWS_SECRET_ACCESS_KEY=your-aws-secret-key
 AWS_DEFAULT_REGION=us-east-1
 
 # ====================
-# Advanced Options (Optional)
+# Pokročilé možnosti (volitelné)
 # ====================
-# Logging and debugging
+# Logování a ladění
 CIPHER_LOG_LEVEL=info  # error, warn, info, debug, silly
 REDACT_SECRETS=true
 
-# Vector store configuration
+# Konfigurace vector store
 VECTOR_STORE_DIMENSION=1536
 VECTOR_STORE_DISTANCE=Cosine  # Cosine, Euclidean, Dot, Manhattan
 VECTOR_STORE_MAX_VECTORS=10000
 
-# Memory search configuration
-SEARCH_MEMORY_TYPE=knowledge  # knowledge, reflection, both (default: knowledge)
-DISABLE_REFLECTION_MEMORY=true  # default: true
+# Konfigurace vyhledávání v paměti
+SEARCH_MEMORY_TYPE=knowledge  # knowledge, reflection, both (výchozí: knowledge)
+DISABLE_REFLECTION_MEMORY=true  # výchozí: true
 ```
 
-> **Tip:** Copy `.env.example` to `.env` and fill in your values:
+> **Tip:** Zkopírujte `.env.example` do `.env` a vyplňte své hodnoty:
 >
 > ```bash
 > cp .env.example .env
@@ -287,21 +287,21 @@ DISABLE_REFLECTION_MEMORY=true  # default: true
 
 </details>
 
-## MCP Server Usage
+## Použití MCP serveru
 
-Cipher can run as an MCP (Model Context Protocol) server, allowing integration with MCP-compatible clients like Claude Desktop, Cursor, Windsurf, and other AI coding assistants.
+Cipher může fungovat jako MCP (Model Context Protocol) server, umožňující integraci s MCP-kompatibilními klienty jako Claude Desktop, Cursor, Windsurf a další AI kódovací asistenti.
 
-### Installing via Smithery
+### Instalace přes Smithery
 
-To install cipher for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@campfirein/cipher):
+Pro automatickou instalaci cipher pro Claude Desktop přes [Smithery](https://smithery.ai/server/@campfirein/cipher):
 
 ```bash
 npx -y @smithery/cli install @campfirein/cipher --client claude
 ```
 
-### Quick Setup
+### Rychlé nastavení
 
-To use Cipher as an MCP server in your MCP client configuration:
+Pro použití Cipher jako MCP server ve vaší MCP klientské konfiguraci:
 
 ```json
 {
@@ -320,101 +320,101 @@ To use Cipher as an MCP server in your MCP client configuration:
 }
 ```
 
- **See [MCP Integration Guide](./docs/mcp-integration.md)** for complete MCP setup and advanced features.
+ **Viz [Průvodce MCP integrace](./docs/mcp-integration.md)** pro kompletní MCP nastavení a pokročilé funkce.
 
- **Built-in tools overview**  expand the dropdown below to scan everything at a glance. For full details, see [`docs/builtin-tools.md`](./docs/builtin-tools.md) .
+ **Přehled vestavěných nástrojů** - rozbalte dropdown níže pro rychlý náhled. Pro kompletní detaily viz [`docs/builtin-tools.md`](./docs/builtin-tools.md).
 
 <details>
-<summary>Built-in Tools (overview)</summary>
+<summary>Vestavěné nástroje (přehled)</summary>
 
-- Memory
-  - `cipher_extract_and_operate_memory`: Extracts knowledge and applies ADD/UPDATE/DELETE in one step
-  - `cipher_memory_search`: Semantic search over stored knowledge
-  - `cipher_store_reasoning_memory`: Store high-quality reasoning traces
-- Reasoning (Reflection)
-  - `cipher_extract_reasoning_steps` (internal): Extract structured reasoning steps
-  - `cipher_evaluate_reasoning` (internal): Evaluate reasoning quality and suggest improvements
-  - `cipher_search_reasoning_patterns`: Search reflection memory for patterns
-- Workspace Memory (team)
-  - `cipher_workspace_search`: Search team/project workspace memory
-  - `cipher_workspace_store`: Background capture of team/project signals
-- Knowledge Graph
+- Paměť
+  - `cipher_extract_and_operate_memory`: Extrahuje znalosti a aplikuje ADD/UPDATE/DELETE v jednom kroku
+  - `cipher_memory_search`: Sémantické vyhledávání v uložených znalostech
+  - `cipher_store_reasoning_memory`: Ukládání vysoce kvalitních stop uvažování
+- Uvažování (Reflexe)
+  - `cipher_extract_reasoning_steps` (interní): Extrakce strukturovaných kroků uvažování
+  - `cipher_evaluate_reasoning` (interní): Hodnocení kvality uvažování a návrhy vylepšení
+  - `cipher_search_reasoning_patterns`: Vyhledávání vzorů v paměti reflexe
+- Workspace paměť (tým)
+  - `cipher_workspace_search`: Vyhledávání v týmové/projektové workspace paměti
+  - `cipher_workspace_store`: Zachycování týmových/projektových signálů na pozadí
+- Knowledge Graf
   - `cipher_add_node`, `cipher_update_node`, `cipher_delete_node`, `cipher_add_edge`
   - `cipher_search_graph`, `cipher_enhanced_search`, `cipher_get_neighbors`
   - `cipher_extract_entities`, `cipher_query_graph`, `cipher_relationship_manager`
-- System
-  - `cipher_bash`: Execute bash commands (one-off or persistent)
+- Systém
+  - `cipher_bash`: Spouštění bash příkazů (jednorázové nebo trvalé)
 
 </details>
 
-## Tutorial Video: Claude Code with Cipher MCP
+## Návodné video: Claude Code s Cipher MCP
 
-Watch our comprehensive tutorial on how to integrate Cipher with Claude Code through MCP for enhanced coding assistance with persistent memory:
+Sledujte naš komplexní tutoárial o integraci Cipher s Claude Code přes MCP pro vylepšenou pomoc s kódováním s perzistentní pamětí:
 
-[![Cipher + Claude Code Tutorial](https://img.youtube.com/vi/AZh9Py6g07Y/maxresdefault.jpg)](https://www.youtube.com/watch?v=AZh9Py6g07Y)
+[![Cipher + Claude Code Tutořál](https://img.youtube.com/vi/AZh9Py6g07Y/maxresdefault.jpg)](https://www.youtube.com/watch?v=AZh9Py6g07Y)
 
-> **Click the image above to watch the tutorial on YouTube.**
+> **Klikněte na obrázek výše pro sledování tutoriálu na YouTube.**
 
-For detailed configuration instructions, see the [CLI Coding Agents guide](./examples/02-cli-coding-agents/README.md).
+Pro podrobné instrukce konfigurace viz [průvodce CLI kódovacích agentů](./examples/02-cli-coding-agents/README.md).
 
-## Documentation
+## Dokumentace
 
-###  Complete Documentation
+###  Kompletní dokumentace
 
-| Topic                                                        | Description                                                                       |
+| Téma                                                        | Popis                                                                       |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| [API Reference](./docs/api-reference.md)                     | Complete REST API documentation for all 47 endpoints and WebSocket communication |
-| [Monitoring & Analytics](./docs/monitoring.md)               | System monitoring, performance analytics, error tracking, and health dashboards |
-| [Configuration](./docs/configuration.md)                     | Complete configuration guide including agent setup, embeddings, and vector stores |
-| [LLM Providers](./docs/llm-providers.md)                     | Detailed setup for OpenAI, Anthropic, AWS, Azure, Qwen, Ollama, LM Studio         |
-| [Embedding Configuration](./docs/embedding-configuration.md) | Embedding providers, fallback logic, and troubleshooting                          |
-| [Vector Stores](./docs/vector-stores.md)                     | Qdrant, Milvus, In-Memory vector database configurations                          |
-| [Chat History](./docs/chat-history.md)                       | PostgreSQL, SQLite session storage and management                                 |
-| [CLI Reference](./docs/cli-reference.md)                     | Complete command-line interface documentation                                     |
-| [MCP Integration](./docs/mcp-integration.md)                 | Advanced MCP server setup, aggregator mode, and IDE integrations                  |
-| [Claude Code Integration](./docs/claude-code-integration-navod.md) | Kompletní návod na propojení Cipher s Claude Code přes MCP |
-| [Workspace Memory](./docs/workspace-memory.md)               | Team-aware memory system for collaborative development                            |
-| [Performance Optimization](./docs/performance-optimization.md) | Connection pooling, memory management, and performance tuning guide              |
-| [Examples](./docs/examples.md)                               | Real-world integration examples and use cases                                     |
+| [API Reference](./docs/api-reference.md)                     | Kompletní REST API dokumentace pro všech 47 endpointů a WebSocket komunikaci |
+| [Monitoring & Analytics](./docs/monitoring.md)               | Systémové monitorování, výkonnostní analytika, sledování chyb a health dashboardy |
+| [Konfigurace](./docs/configuration.md)                     | Kompletní průvodce konfiguraci včetně nastavení agentů, embeddingů a vector stores |
+| [LLM Poskytovatelé](./docs/llm-providers.md)                     | Detailní nastavení pro OpenAI, Anthropic, AWS, Azure, Qwen, Ollama, LM Studio         |
+| [Konfigurace embeddingů](./docs/embedding-configuration.md) | Poskytovatelé embeddingů, záložní logika a řešení problémů                          |
+| [Vector Stores](./docs/vector-stores.md)                     | Qdrant, Milvus, In-Memory konfigurace vektorových databází                          |
+| [Historie chatu](./docs/chat-history.md)                       | PostgreSQL, SQLite úložiště relací a správa                                 |
+| [CLI Reference](./docs/cli-reference.md)                     | Kompletní dokumentace příkazového řádku                                     |
+| [MCP Integrace](./docs/mcp-integration.md)                 | Pokročilé nastavení MCP serveru, aggregator režim a IDE integrace                  |
+| [Claude Code Integrace](./docs/claude-code-integration-navod.md) | Kompletní návod na propojení Cipher s Claude Code přes MCP |
+| [Workspace paměť](./docs/workspace-memory.md)               | Týmově orientovaný paměťový systém pro kolaborativní vývoj                            |
+| [Optimalizace výkonu](./docs/performance-optimization.md) | Pooling připojení, správa paměti a průvodce laděním výkonu              |
+| [Příklady](./docs/examples.md)                               | Reálné integrační příklady a případy užití                                     |
 
-###  Next Steps
+###  Další kroky
 
-For detailed documentation, visit:
+Pro podrobnou dokumentaci navštivte:
 
-- [Quick Start Guide](https://docs.byterover.dev/cipher/quickstart)
-- [Configuration Guide](https://docs.byterover.dev/cipher/configuration)
-- [Complete Documentation](https://docs.byterover.dev/cipher/overview)
+- [Průvodce rychlým startem](https://docs.byterover.dev/cipher/quickstart)
+- [Konfigurační průvodce](https://docs.byterover.dev/cipher/configuration)
+- [Kompletní dokumentace](https://docs.byterover.dev/cipher/overview)
 
-## Contributing
+## Přispěvání
 
-We welcome contributions! Refer to our [Contributing Guide](./CONTRIBUTING.md) for more details.
+Vítame příspěvky! Viz naš [Průvodce pro přispěvatele](./CONTRIBUTING.md) pro více detailů.
 
-## Community & Support
+## Komunita a podpora
 
-**cipher** is the opensource version of the agentic memory of [byterover](https://byterover.dev/) which is built and maintained by the byterover team.
+**cipher** je open-source verze agentické paměti od [byterover](https://byterover.dev/), která je vyvíjena a udržována byterover týmem.
 
-- Join our [Discord](https://discord.com/invite/UMRrpNjh5W) to share projects, ask questions, or just say hi!
-- If you enjoy cipher, please give us a  on GitHubit helps a lot!
-- Follow [@kevinnguyendn](https://x.com/kevinnguyendn) on X
+- Připojte se k našemu [Discord](https://discord.com/invite/UMRrpNjh5W) pro sdílení projektů, kladnání otázek nebo jen pozdrav!
+- Pokud se vám cipher líbí, prosím dějte nám hvězdičku na GitHub - moc to pomůže!
+- Sledujte [@kevinnguyendn](https://x.com/kevinnguyendn) na X
 
-## Contributors
+## Přispěvatelé
 
-Thanks to all these amazing people for contributing to cipher!
+Děkujeme všem těmto újemným lidem za přispěvání do cipher!
 
-[![Contributors](https://contrib.rocks/image?repo=campfirein/cipher&max=40&columns=10)](https://github.com/campfirein/cipher/graphs/contributors)
+[![Přispěvatelé](https://contrib.rocks/image?repo=campfirein/cipher&max=40&columns=10)](https://github.com/campfirein/cipher/graphs/contributors)
 
-## MseeP.ai Security Assessment Badge
+## MseeP.ai bezpečnostní hodnocení
 
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/campfirein-cipher-badge.png)](https://mseep.ai/app/campfirein-cipher)
+[![MseeP.ai bezpečnostní hodnocení](https://mseep.net/pr/campfirein-cipher-badge.png)](https://mseep.ai/app/campfirein-cipher)
 
-## Star History
+## Historie hvězdiček
 
 <a href="https://star-history.com/#campfirein/cipher&Date">
-  <img width="500" alt="Star History Chart" src="https://api.star-history.com/svg?repos=campfirein/cipher&type=Date&v=2">
+  <img width="500" alt="Graf historie hvězdiček" src="https://api.star-history.com/svg?repos=campfirein/cipher&type=Date&v=2">
 </a>
 
-## License
+## Licence
 
-Elastic License 2.0. See [LICENSE](LICENSE) for full terms.
+Elastic License 2.0. Viz [LICENCE](LICENSE) pro plné podmínky.
 
 

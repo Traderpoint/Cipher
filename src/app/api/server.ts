@@ -12,6 +12,12 @@ import {
 	requestLoggingMiddleware,
 	errorLoggingMiddleware,
 } from './middleware/logging.js';
+import {
+	requestMetricsMiddleware,
+	errorTrackingMiddleware,
+	initializeMetricsCollection,
+	WebSocketTracker
+} from '@core/monitoring/middleware.js';
 import { Server as McpServer } from '@modelcontextprotocol/sdk/server/index.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { initializeMcpServer, initializeAgentCardResource } from '@app/mcp/mcp_handler.js';
@@ -401,6 +407,9 @@ export class ApiServer {
 			// Add connection to manager
 			const connectionId = this.wsConnectionManager!.addConnection(ws, sessionId);
 
+			// Initialize WebSocket tracking for monitoring
+			const wsTracker = new WebSocketTracker(connectionId);
+
 			logger.info('[API Server] New WebSocket connection established', {
 				connectionId,
 				sessionId,
@@ -411,9 +420,18 @@ export class ApiServer {
 			// Set up message handler
 			ws.on('message', async (data: Buffer) => {
 				try {
+					// Track incoming message
+					wsTracker.trackMessage(true);
+
 					const message = JSON.parse(data.toString()) as WebSocketMessage;
 					await this.wsMessageRouter!.routeMessage(ws, connectionId, message);
+
+					// Track outgoing response (assuming router sends response)
+					wsTracker.trackMessage(false);
 				} catch (error) {
+					// Track WebSocket error
+					wsTracker.trackError();
+
 					logger.error('[API Server] Error parsing WebSocket message', {
 						connectionId,
 						error: error instanceof Error ? error.message : String(error),
@@ -532,6 +550,9 @@ export class ApiServer {
 		// Custom middleware
 		this.app.use(requestIdMiddleware);
 		this.app.use(requestLoggingMiddleware);
+
+		// Monitoring middleware - track all API requests
+		this.app.use(requestMetricsMiddleware);
 	}
 
 	private setupRoutes(): void {
@@ -723,6 +744,9 @@ export class ApiServer {
 		// Error logging middleware
 		this.app.use(errorLoggingMiddleware);
 
+		// Monitoring error tracking middleware
+		this.app.use(errorTrackingMiddleware);
+
 		// Global error handler
 		this.app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 			// If response already sent, delegate to default Express error handler
@@ -754,6 +778,17 @@ export class ApiServer {
 	}
 
 	public async start(): Promise<void> {
+		// Initialize monitoring system
+		try {
+			initializeMetricsCollection();
+			logger.info('[API Server] Monitoring system initialized successfully');
+		} catch (error) {
+			logger.error(
+				`[API Server] Failed to initialize monitoring: ${error instanceof Error ? error.message : String(error)}`
+			);
+			// Don't throw - monitoring failure shouldn't prevent server start
+		}
+
 		// Set up MCP server BEFORE starting HTTP server if transport type is provided
 		if (this.config.mcpTransportType) {
 			try {

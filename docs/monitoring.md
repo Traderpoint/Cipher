@@ -90,24 +90,26 @@ Poskytuje přehled všech služeb a jejich stavu.
 
 ### Import a použití
 ```tsx
-import { MonitoringDashboard } from '@/components/monitoring-dashboard';
+import { AdvancedMonitoringDashboard } from '@/components/advanced-monitoring-dashboard';
 
 function AdminPanel() {
   return (
     <div>
-      <h1>System Administration</h1>
-      <MonitoringDashboard />
+      <h1>Systémová administrace</h1>
+      <AdvancedMonitoringDashboard />
     </div>
   );
 }
 ```
 
-### Funkce dashboard
+### Funkce advanced dashboard
 - **Real-time data**: Automatické obnovování každých 30 sekund
-- **Health status**: Vizuální indikátory stavu systému
-- **Performance charts**: Grafy pro LLM, API endpoints, search patterns
-- **Memory usage**: Progress bary a statistiky
-- **Error tracking**: Přehled chyb a jejich severity
+- **Advanced health status**: Pokročilé vizuální indikátory stavu systému
+- **Comprehensive metrics**: Detailní metriky pro PostgreSQL, API, WebSocket, LLM a Memory
+- **Performance charts**: Interaktivní grafy s real-time daty
+- **Error tracking**: Pokročilé sledování chyb s kategorizací podle severity
+- **System alerts**: Real-time notifikace o kritických stavech
+- **Connection monitoring**: Sledování databázových poolů a aktivních spojení
 
 ## Programmatic Usage
 

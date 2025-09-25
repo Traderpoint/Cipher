@@ -476,14 +476,6 @@ export const AdvancedMonitoringDashboard: React.FC = () => {
               <span>Cipher Welcome Page</span>
               <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
             </a>
-            <a
-              href="/monitoring"
-              className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>Basic Monitoring</span>
-              <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
-            </a>
           </div>
         </div>
       </div>
