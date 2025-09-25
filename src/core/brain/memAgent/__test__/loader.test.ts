@@ -35,6 +35,12 @@ describe('Loader', () => {
 		delete process.env.API_KEY;
 		delete process.env.PORT;
 		delete process.env.TIMEOUT;
+		delete process.env.USERNAME;
+		delete process.env.DB_HOST;
+		delete process.env.DB_PORT;
+		delete process.env.test_var;
+		delete process.env.lower_case_var;
+		delete process.env.UPPER_CASE_VAR;
 	});
 
 	afterEach(() => {
@@ -256,15 +262,15 @@ describe('Loader', () => {
 		});
 
 		it('should handle case-insensitive environment variable names', async () => {
-			process.env.test_var = 'lowercase';
-			process.env.TEST_VAR = 'uppercase';
+			process.env.lower_case_var = 'lowercase';
+			process.env.UPPER_CASE_VAR = 'uppercase';
 
 			const mockConfig = {
-				systemPrompt: '$test_var',
+				systemPrompt: '$lower_case_var',
 				llm: {
 					provider: 'openai',
 					model: 'gpt-4',
-					apiKey: '$TEST_VAR',
+					apiKey: '$UPPER_CASE_VAR',
 				},
 			};
 
@@ -272,7 +278,6 @@ describe('Loader', () => {
 			mockParseYaml.mockReturnValue(mockConfig);
 
 			const result = (await loadAgentConfig('/path/to/config.yml')) as any;
-			console.log(result);
 			expect(result.systemPrompt).toBe('lowercase');
 			expect(result.llm.apiKey).toBe('uppercase');
 		});

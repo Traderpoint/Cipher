@@ -62,6 +62,14 @@ function MainChatInterface() {
       icon: "💡"
     },
     {
+      title: "System Monitoring",
+      description: "View advanced system metrics",
+      action: () => {
+        window.open('/advanced-monitoring', '_blank');
+      },
+      icon: "📊"
+    },
+    {
       title: "Connect new tools",
       description: "Browse and add MCP servers",
       action: () => setIsServersPanelOpen(true),

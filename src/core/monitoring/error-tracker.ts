@@ -60,7 +60,7 @@ export class ErrorTracker {
 			id: errorId,
 			timestamp: new Date(),
 			message: errorMessage,
-			stack: errorStack,
+			...(errorStack && { stack: errorStack }),
 			type,
 			severity,
 			context,
@@ -144,7 +144,9 @@ export class ErrorTracker {
 
 		error.resolved = true;
 		error.resolvedAt = new Date();
-		error.resolution = resolution;
+		if (resolution !== undefined) {
+			error.resolution = resolution;
+		}
 
 		logger.info('Error resolved', {
 			errorId,
@@ -217,7 +219,7 @@ export class ErrorTracker {
 		const topErrors = Object.entries(this.errorCounts)
 			.map(([key, count]) => {
 				const [type, message] = key.split(':', 2);
-				return { message, count, type: type as ErrorInfo['type'] };
+				return { message: message || 'Unknown error', count, type: type as ErrorInfo['type'] };
 			})
 			.sort((a, b) => b.count - a.count)
 			.slice(0, 10);

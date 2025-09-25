@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { metricsCollector } from './metrics-collector.js';
 
 export interface MonitoringRequest extends Request {
-	startTime?: number;
+	startTime: number;
 }
 
 /**
@@ -98,8 +98,6 @@ export function memorySearchWrapper<T extends (...args: any[]) => Promise<any>>(
 			}
 
 			return result;
-		} catch (error) {
-			throw error;
 		} finally {
 			const searchTime = Date.now() - startTime;
 			metricsCollector.trackMemorySearch(searchTime, searchPattern, relevanceScore);

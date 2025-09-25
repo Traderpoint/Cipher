@@ -7,12 +7,43 @@
 
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
+import { platform } from 'os';
 import {
 	createInternalToolName,
 	type InternalTool,
 	type InternalToolHandler,
 } from '../../types.js';
 import { logger } from '../../../../logger/index.js';
+
+/**
+ * Get the appropriate shell command for the current platform
+ */
+function getShellCommand(): string {
+	const os = platform();
+	switch (os) {
+		case 'win32':
+			return 'cmd.exe';
+		case 'darwin':
+		case 'linux':
+		default:
+			return '/bin/bash';
+	}
+}
+
+/**
+ * Get shell arguments for executing a command
+ */
+function getShellArgs(command: string): string[] {
+	const os = platform();
+	switch (os) {
+		case 'win32':
+			return ['/c', command];
+		case 'darwin':
+		case 'linux':
+		default:
+			return ['-c', command];
+	}
+}
 
 /**
  * Command execution result structure
@@ -65,11 +96,16 @@ class BashSession extends EventEmitter {
 		}
 
 		try {
-			// Start bash process with non-interactive mode to avoid prompt issues
-			this.process = spawn('/bin/bash', [], {
+			// Start shell process with platform-appropriate shell
+			const shellCommand = getShellCommand();
+			const shellArgs = platform() === 'win32' ? [] : []; // No additional args for interactive session
+
+			this.process = spawn(shellCommand, shellArgs, {
 				cwd: this.currentWorkingDir,
 				stdio: ['pipe', 'pipe', 'pipe'],
 				env: { ...process.env },
+				// Don't use shell option for interactive sessions - spawn cmd.exe directly
+				shell: false,
 			});
 
 			this.isRunning = true;
@@ -128,7 +164,16 @@ class BashSession extends EventEmitter {
 
 			// Send command with a unique marker to detect completion
 			const marker = `CMD_COMPLETE_${Date.now()}`;
-			const fullCommand = `${command}; echo "${marker}"; echo "EXIT_CODE:$?" `;
+			let fullCommand: string;
+
+			if (platform() === 'win32') {
+				// Windows cmd.exe syntax
+				fullCommand = `${command} & echo ${marker} & echo EXIT_CODE:%ERRORLEVEL%`;
+			} else {
+				// Unix bash syntax
+				fullCommand = `${command}; echo "${marker}"; echo "EXIT_CODE:$?"`;
+			}
+
 			this.process!.stdin?.write(`${fullCommand}\n`);
 
 			// Wait for command completion
@@ -136,9 +181,40 @@ class BashSession extends EventEmitter {
 				if (this.outputBuffer.includes(marker)) {
 					clearTimeout(timeoutId);
 
-					// Extract output before the marker
-					const parts = this.outputBuffer.split(marker);
-					const output = parts[0]?.trim() || '';
+					// Extract command output using a simpler approach
+					// Look for the pattern: command output followed by marker on its own line
+					const markerPattern = `\\r?\\n${marker}\\s*\\r?\\n`;
+					const markerRegex = new RegExp(markerPattern);
+					const parts = this.outputBuffer.split(markerRegex);
+
+					let output = '';
+					if (parts.length > 0) {
+						// Take everything before the marker
+						const beforeMarker = parts[0];
+
+						if (platform() === 'win32') {
+							// For Windows, find the last prompt line and take content after it
+							const lines = beforeMarker.split(/\r?\n/);
+							let contentStartIndex = -1;
+
+							// Find the last command prompt line
+							for (let i = lines.length - 1; i >= 0; i--) {
+								if (lines[i].match(/^[A-Z]:\\.+>/)) {
+									contentStartIndex = i + 1;
+									break;
+								}
+							}
+
+							if (contentStartIndex !== -1 && contentStartIndex < lines.length) {
+								// Extract lines after the last prompt
+								const contentLines = lines.slice(contentStartIndex);
+								output = contentLines.join('\n').trim();
+							}
+						} else {
+							// Unix: simpler approach
+							output = beforeMarker.trim();
+						}
+					}
 
 					// Try to extract exit code
 					const exitCodeMatch = this.outputBuffer.match(/EXIT_CODE:(\d+)/);
@@ -240,7 +316,8 @@ class BashSessionManager {
  * Execute a bash command with optional session persistence
  */
 async function executeBashCommand(options: CommandOptions): Promise<CommandResult> {
-	const { command, timeout = 30000, workingDir, environment, shell = '/bin/bash' } = options;
+	const { command, timeout = 30000, workingDir, environment, shell } = options;
+	const actualShell = shell || getShellCommand();
 
 	logger.debug('Executing bash command', { command, timeout, workingDir });
 
@@ -254,7 +331,8 @@ async function executeBashCommand(options: CommandOptions): Promise<CommandResul
 		let output = '';
 		let error = '';
 
-		const childProcess = spawn(shell, ['-c', command], {
+		const shellArgs = getShellArgs(command);
+		const childProcess = spawn(actualShell, shellArgs, {
 			cwd: workingDir || process.cwd(),
 			env: { ...process.env, ...environment },
 			stdio: ['pipe', 'pipe', 'pipe'],

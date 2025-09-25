@@ -27,8 +27,8 @@ interface MemoryToolInfo {
 
 interface ToolInventory {
 	tools: MemoryToolInfo[];
-	unifiedTools?: Record<string, any>;
-	internalTools?: Record<string, any>;
+	unifiedTools?: Record<string, any> | undefined;
+	internalTools?: Record<string, any> | undefined;
 }
 
 export function createMemoryRoutes(agent: MemAgent): Router {
@@ -53,7 +53,7 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 
 	const resolveSessionId = async (
 		requestedSessionId?: string
-	): Promise<{ resolvedSessionId?: string; notFound: boolean }> => {
+	): Promise<{ resolvedSessionId?: string | undefined; notFound: boolean }> => {
 		if (!requestedSessionId) {
 			return {
 				resolvedSessionId: getDefaultSessionId(),
@@ -257,9 +257,15 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 
 			const stats = {
 				vectorStorage: {
-					connected: vectorInfo?.connected ?? !!vectorStorage,
-					type: vectorStorage?.constructor?.name || vectorInfo?.backend?.type || 'unknown',
-					...(vectorInfo && {
+					connected: vectorInfo && 'connected' in vectorInfo
+						? vectorInfo.connected
+						: vectorInfo && 'knowledge' in vectorInfo
+						? vectorInfo.knowledge.connected
+						: !!vectorStorage,
+					type: vectorStorage?.constructor?.name ||
+						(vectorInfo && 'backend' in vectorInfo ? vectorInfo.backend?.type : undefined) ||
+						'unknown',
+					...(vectorInfo && 'backend' in vectorInfo && vectorInfo.backend && {
 						backend: {
 							type: vectorInfo.backend.type,
 							collection: vectorInfo.backend.collectionName,

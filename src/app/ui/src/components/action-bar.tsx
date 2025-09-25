@@ -2,11 +2,12 @@
 
 import * as React from "react"
 import { Button } from "@/components/ui/button"
-import { 
+import {
   // Search,
-  MessageSquare, 
+  MessageSquare,
   Package,
-  X 
+  X,
+  BarChart3
 } from "lucide-react"
 import { ActionBarProps } from "@/types/chat"
 import { cn } from "@/lib/utils"
@@ -65,6 +66,17 @@ export function ActionBar({
         ) : (
           <Package className="w-4 h-4" />
         )}
+      </Button>
+
+      {/* Monitoring dashboard */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => window.open('/advanced-monitoring', '_blank')}
+        className="h-8 w-8 p-0"
+        title="System Monitoring Dashboard"
+      >
+        <BarChart3 className="w-4 h-4" />
       </Button>
 
     </div>

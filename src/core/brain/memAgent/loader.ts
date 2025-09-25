@@ -7,10 +7,10 @@ import { env } from '../../env.js';
 function expandEnvVars(config: any): any {
 	if (typeof config === 'string') {
 		const expanded = config.replace(
-			/\$([A-Z_][A-Z0-9_]*)|\${([A-Z_][A-Z0-9_]*)}/gi,
+			/\$([A-Za-z_][A-Za-z0-9_]*)|\${([A-Za-z_][A-Za-z0-9_]*)}/g,
 			(_, v1, v2) => {
 				const key = v1 || v2;
-				return (env as any)[key] || '';
+				return process.env[key] || '';
 			}
 		);
 

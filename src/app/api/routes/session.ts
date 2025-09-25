@@ -718,7 +718,7 @@ export function createSessionRoutes(agent: MemAgent): Router {
 			for (const sessionId of sessionIds) {
 				try {
 					const metadata = await agent.getSessionMetadata(sessionId);
-					if (metadata && metadata.messageCount > 0) {
+					if (metadata && metadata.messageCount && metadata.messageCount > 0) {
 						activeSessions++;
 						totalMessages += metadata.messageCount || 0;
 					}

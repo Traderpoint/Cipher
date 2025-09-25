@@ -89,7 +89,10 @@ describe('PgVectorBackend', () => {
 			await backend.insert([[1, 2, 3]], [1], [{ data: 'test' }]);
 			expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
 			expect(mockClient.query).toHaveBeenCalledWith(
-				`INSERT INTO ${collectionName} (id, vector, payload) VALUES ($1, $2, $3)`,
+				`INSERT INTO ${collectionName} (id, vector, payload) VALUES ($1, $2, $3)
+				 ON CONFLICT (id) DO UPDATE SET
+				 vector = EXCLUDED.vector,
+				 payload = EXCLUDED.payload`,
 				[1, '[1,2,3]', { data: 'test' }]
 			);
 			expect(mockClient.query).toHaveBeenCalledWith('COMMIT');

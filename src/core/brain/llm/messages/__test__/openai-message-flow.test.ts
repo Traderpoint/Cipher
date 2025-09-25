@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ContextManager } from '../manager.js';
 import { OpenAIMessageFormatter } from '../formatters/openai.js';
-import { EnhancedPromptManager } from '../../../brain/systemPrompt/enhanced-manager.js';
+import { EnhancedPromptManager } from '../../../systemPrompt/enhanced-manager.js';
 import { InternalMessage } from '../types.js';
 
 // Mock the logger

@@ -144,7 +144,7 @@ describe('Bash Tool Integration', () => {
 			{
 				sessionId: 'service-test',
 				userId: 'test-user',
-				services: mockServices,
+				services: mockServices as any,
 			}
 		);
 

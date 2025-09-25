@@ -91,7 +91,7 @@ export interface AllMetrics {
 
 export class MetricsCollector extends EventEmitter {
 	private metrics: AllMetrics;
-	private collectInterval: NodeJS.Timer | null = null;
+	private collectInterval: NodeJS.Timeout | null = null;
 	private llmRequestTimes: Map<string, number[]> = new Map();
 	private apiRequestTimes: Map<string, number[]> = new Map();
 	private searchTimes: number[] = [];

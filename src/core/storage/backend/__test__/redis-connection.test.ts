@@ -28,7 +28,7 @@ vi.mock('ioredis', () => ({
 	})),
 }));
 
-const MockedRedis = Redis as unknown as MockedFunction<typeof Redis>;
+const MockedRedis = Redis as any;
 
 describe('RedisBackend Connection Fixes', () => {
 	let backend: RedisBackend;

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach, type MockedFunction } from 'vitest';
 import { TokenizerCache, getTokenizerCache } from '../cache.js';
 import { ITokenizer, TokenizerConfig } from '../types.js';
 
@@ -54,7 +54,7 @@ class MockTokenizer implements ITokenizer {
 
 describe('TokenizerCache', () => {
 	let cache: TokenizerCache;
-	let mockFactory: vi.MockedFunction<(config: TokenizerConfig) => ITokenizer>;
+	let mockFactory: MockedFunction<(config: TokenizerConfig) => ITokenizer>;
 
 	beforeEach(() => {
 		// Clear any existing cache instance

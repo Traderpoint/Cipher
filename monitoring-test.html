@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cipher Monitoring Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .card { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .status-healthy { background-color: #d4edda; }
+        .status-warning { background-color: #fff3cd; }
+        .status-critical { background-color: #f8d7da; }
+        .metric { display: flex; justify-content: space-between; margin: 5px 0; }
+        #refresh { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Cipher System Monitoring</h1>
+    <button id="refresh" onclick="loadDashboard()">🔄 Refresh Data</button>
+
+    <div id="dashboard">Loading...</div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api/monitoring';
+
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`${API_BASE}/dashboard`);
+                const data = await response.json();
+                displayDashboard(data);
+            } catch (error) {
+                document.getElementById('dashboard').innerHTML = `
+                    <div class="card status-critical">
+                        <h3>❌ Connection Error</h3>
+                        <p>Failed to connect to API server at ${API_BASE}</p>
+                        <p>Make sure API server is running on port 3001</p>
+                        <p>Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayDashboard(data) {
+            const statusClass = `status-${data.health.status}`;
+            const statusIcon = data.health.status === 'healthy' ? '✅' :
+                              data.health.status === 'warning' ? '⚠️' : '❌';
+
+            document.getElementById('dashboard').innerHTML = `
+                <div class="card ${statusClass}">
+                    <h3>${statusIcon} System Health: ${data.health.status.toUpperCase()}</h3>
+                    <p>Last updated: ${new Date(data.timestamp).toLocaleString()}</p>
+                    ${data.health.issues.length > 0 ? `
+                        <div><strong>Issues:</strong>
+                        <ul>${data.health.issues.map(issue => `<li>${issue}</li>`).join('')}</ul></div>
+                    ` : '<p style="color: green;">All systems operational</p>'}
+                </div>
+
+                <div class="card">
+                    <h3>📊 System Summary</h3>
+                    <div class="metric"><span>Uptime:</span> <span>${formatUptime(data.summary.uptime)}</span></div>
+                    <div class="metric"><span>Memory Usage:</span> <span>${data.summary.memoryUsage.toFixed(1)}%</span></div>
+                    <div class="metric"><span>Active Connections:</span> <span>${data.summary.activeConnections}</span></div>
+                    <div class="metric"><span>Active Sessions:</span> <span>${data.summary.activeSessions}</span></div>
+                    <div class="metric"><span>Knowledge Items:</span> <span>${data.summary.totalKnowledge.toLocaleString()}</span></div>
+                </div>
+
+                <div class="card">
+                    <h3>🤖 LLM Performance</h3>
+                    <div class="metric"><span>Total Requests:</span> <span>${data.summary.llm.totalRequests.toLocaleString()}</span></div>
+                    <div class="metric"><span>Average Response:</span> <span>${data.summary.llm.averageResponseTime.toFixed(0)}ms</span></div>
+                    <div class="metric"><span>Providers:</span> <span>${data.summary.llm.providers}</span></div>
+
+                    ${data.charts.llmPerformance.length > 0 ? `
+                        <h4>Provider Details:</h4>
+                        ${data.charts.llmPerformance.map(llm => `
+                            <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                                <div class="metric"><span><strong>${llm.provider}</strong></span> <span>${llm.requests} requests</span></div>
+                                <div class="metric"><span>Avg Time:</span> <span>${llm.avgTime.toFixed(0)}ms</span></div>
+                                <div class="metric"><span>Error Rate:</span> <span>${(llm.errorRate * 100).toFixed(1)}%</span></div>
+                                <div class="metric"><span>Tokens:</span> <span>${llm.tokens.toLocaleString()}</span></div>
+                            </div>
+                        `).join('')}
+                    ` : '<p>No LLM activity recorded</p>'}
+                </div>
+
+                <div class="card">
+                    <h3>🌐 API Activity</h3>
+                    <div class="metric"><span>Total Requests:</span> <span>${data.summary.api.totalRequests.toLocaleString()}</span></div>
+                    <div class="metric"><span>Average Response:</span> <span>${data.summary.api.averageResponseTime.toFixed(0)}ms</span></div>
+                    <div class="metric"><span>Endpoints:</span> <span>${data.summary.api.endpoints}</span></div>
+
+                    ${data.charts.apiEndpoints.length > 0 ? `
+                        <h4>Popular Endpoints:</h4>
+                        ${data.charts.apiEndpoints.slice(0, 5).map(endpoint => `
+                            <div style="margin: 5px 0;">
+                                <div class="metric">
+                                    <span><code>${endpoint.endpoint}</code></span>
+                                    <span>${endpoint.count} calls (${endpoint.averageTime.toFixed(0)}ms avg)</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    ` : '<p>No API activity recorded</p>'}
+                </div>
+
+                <div class="card">
+                    <h3>🔍 Memory Search Patterns</h3>
+                    ${data.charts.searchPatterns.length > 0 ?
+                        data.charts.searchPatterns.slice(0, 5).map(pattern => `
+                            <div class="metric">
+                                <span>"${pattern.pattern || 'Unknown'}"</span>
+                                <span>${pattern.count} searches (${(pattern.averageRelevance * 100).toFixed(1)}% relevance)</span>
+                            </div>
+                        `).join('')
+                    : '<p>No search activity recorded</p>'}
+                </div>
+
+                <div class="card">
+                    <h3>📡 WebSocket Activity</h3>
+                    <div class="metric"><span>Messages Received:</span> <span>${data.charts.websocketActivity.received.toLocaleString()}</span></div>
+                    <div class="metric"><span>Messages Sent:</span> <span>${data.charts.websocketActivity.sent.toLocaleString()}</span></div>
+                    <div class="metric"><span>Connection Errors:</span> <span>${data.charts.websocketActivity.errors}</span></div>
+                </div>
+            `;
+        }
+
+        function formatUptime(seconds) {
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+
+            if (days > 0) return `${days}d ${hours}h ${mins}m`;
+            if (hours > 0) return `${hours}h ${mins}m`;
+            return `${mins}m`;
+        }
+
+        // Load dashboard on page load
+        loadDashboard();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadDashboard, 30000);
+    </script>
+</body>
+</html>

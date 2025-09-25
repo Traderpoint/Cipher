@@ -626,6 +626,49 @@ export class EmbeddingManager {
 	}
 
 	/**
+	 * Check if the embedding manager is ready
+	 */
+	isReady(): boolean {
+		return this.hasAvailableEmbeddings();
+	}
+
+	/**
+	 * Get the provider name of the first available embedder
+	 */
+	getProviderName(): string | undefined {
+		const firstEmbedder = this.embedders.values().next().value;
+		if (firstEmbedder) {
+			const info = Array.from(this.embedderInfo.values())[0];
+			return info?.provider;
+		}
+		return undefined;
+	}
+
+	/**
+	 * Get the dimension of the first available embedder
+	 */
+	getDimension(): number | undefined {
+		const firstEmbedder = this.embedders.values().next().value;
+		if (firstEmbedder) {
+			return firstEmbedder.getDimension();
+		}
+		return undefined;
+	}
+
+	/**
+	 * Generate embedding for a single text using the first available embedder
+	 */
+	async generateEmbedding(text: string): Promise<number[]> {
+		const firstEmbedder = this.embedders.values().next().value;
+		if (!firstEmbedder) {
+			throw new Error('No embedder available');
+		}
+
+		const result = await firstEmbedder.embed(text);
+		return result;
+	}
+
+	/**
 	 * Get session embedding state
 	 */
 	getSessionState(): SessionEmbeddingState {

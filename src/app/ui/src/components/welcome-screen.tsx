@@ -19,6 +19,23 @@ export function WelcomeScreen({ quickActions }: WelcomeScreenProps) {
             <p className="text-muted-foreground text-base text-center">
               Create memories, ask anything or connect new tools to expand what you can do.
             </p>
+            <div className="flex justify-center space-x-4 mt-4">
+              <a
+                href="/monitoring"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                target="_blank"
+              >
+                Basic Monitoring
+              </a>
+              <span className="text-muted-foreground">•</span>
+              <a
+                href="/advanced-monitoring"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                target="_blank"
+              >
+                Advanced Dashboard
+              </a>
+            </div>
           </div>
         </div>
 

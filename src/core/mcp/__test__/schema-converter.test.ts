@@ -292,7 +292,7 @@ describe('Schema Converter', () => {
 
 			expect(result.success).toBe(false);
 			if (!result.success) {
-				expect(result.error).toContain('age');
+				expect((result as { success: false; error: string }).error).toContain('age');
 			}
 		});
 
@@ -307,7 +307,7 @@ describe('Schema Converter', () => {
 
 			expect(result.success).toBe(false);
 			if (!result.success) {
-				expect(result.error).toBe('Custom error');
+				expect((result as { success: false; error: string }).error).toBe('Custom error');
 			}
 		});
 	});

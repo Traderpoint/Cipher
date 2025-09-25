@@ -3,6 +3,10 @@ export { MetricsCollector, metricsCollector } from './metrics-collector.js';
 export { LLMPerformanceTracker, llmPerformanceTracker } from './llm-performance-tracker.js';
 export { ErrorTracker, errorTracker } from './error-tracker.js';
 
+// Import instances for internal use
+import { metricsCollector } from './metrics-collector.js';
+import { errorTracker } from './error-tracker.js';
+
 // Middleware exports
 export {
 	requestMetricsMiddleware,

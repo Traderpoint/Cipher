@@ -178,7 +178,7 @@ describe('ConversationSession', () => {
 			// Session creates its own ContextManager instance now, not using the provided one
 			const contextManager = session.getContextManager();
 			expect(contextManager).toBeDefined();
-			expect(contextManager.sessionId).toBe(sessionId);
+			expect((contextManager as any).sessionId).toBe(sessionId);
 
 			// Trigger lazy loading of LLM service
 			await session.getLLMService();
@@ -530,7 +530,7 @@ describe('ConversationSession', () => {
 			const contextManager = session.getContextManager();
 			// Session creates its own ContextManager instance now
 			expect(contextManager).toBeDefined();
-			expect(contextManager.sessionId).toBe(sessionId);
+			expect((contextManager as any).sessionId).toBe(sessionId);
 		});
 
 		it('should return LLM service', async () => {

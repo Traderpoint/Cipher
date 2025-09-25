@@ -83,7 +83,7 @@ const envSchema = z.object({
 	// Web Search Configuration
 	WEB_SEARCH_ENGINE: z.enum(['duckduckgo']).default('duckduckgo'),
 	WEB_SEARCH_ENABLE: z.boolean().default(true),
-	WEB_SEARCH_SAFETY_MODE: z.enum(['strict', 'moderate']).default('strict'),
+	WEB_SEARCH_SAFETY_MODE: z.enum(['strict', 'moderate']).default('moderate'),
 	WEB_SEARCH_MAX_RESULTS: z.number().min(1).max(20).default(3),
 	WEB_SEARCH_RATE_LIMIT: z.number().min(1).max(60).default(10),
 	// Knowledge Graph Configuration

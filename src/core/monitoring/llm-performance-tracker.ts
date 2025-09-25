@@ -51,10 +51,10 @@ export class LLMPerformanceTracker {
 				model,
 				requestId,
 				// Try to extract additional info from arguments
-				messageLength: typeof args[0] === 'string' ? args[0].length :
-					(args[0] && args[0].messages ? JSON.stringify(args[0].messages).length : undefined),
-				temperature: args[0] && args[0].temperature ? args[0].temperature : undefined,
-				maxTokens: args[0] && args[0].max_tokens ? args[0].max_tokens : undefined
+				...(typeof args[0] === 'string' && { messageLength: args[0].length }),
+				...(args[0] && args[0].messages && { messageLength: JSON.stringify(args[0].messages).length }),
+				...(args[0] && args[0].temperature && { temperature: args[0].temperature }),
+				...(args[0] && args[0].max_tokens && { maxTokens: args[0].max_tokens })
 			};
 
 			tracker.startRequest(requestId, callInfo);
@@ -86,7 +86,6 @@ export class LLMPerformanceTracker {
 
 				tracker.endRequest(requestId, {
 					success: true,
-					responseTime: 0, // Will be calculated in endRequest
 					tokensUsed,
 					inputTokens: inputTokens > 0 ? inputTokens : undefined,
 					outputTokens: outputTokens > 0 ? outputTokens : undefined,
@@ -97,7 +96,6 @@ export class LLMPerformanceTracker {
 			} catch (error) {
 				tracker.endRequest(requestId, {
 					success: false,
-					responseTime: 0, // Will be calculated in endRequest
 					tokensUsed: 0,
 					error: error instanceof Error ? error : new Error(String(error))
 				});
