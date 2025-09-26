@@ -194,18 +194,30 @@ export class MetricsCollector extends EventEmitter {
 		const memUsage = process.memoryUsage();
 
 		this.metrics.system.uptime = process.uptime();
-		this.metrics.system.memory = {
-			used: memUsage.heapUsed,
-			free: memUsage.heapTotal - memUsage.heapUsed,
-			total: memUsage.heapTotal,
-			percentage: (memUsage.heapUsed / memUsage.heapTotal) * 100
-		};
 
-		// Load average (Unix-like systems only)
+		// Get actual system memory instead of just Node.js heap
 		try {
 			const os = await import('os');
+			const totalSystemMem = os.totalmem();
+			const freeSystemMem = os.freemem();
+			const usedSystemMem = totalSystemMem - freeSystemMem;
+
+			this.metrics.system.memory = {
+				used: usedSystemMem,
+				free: freeSystemMem,
+				total: totalSystemMem,
+				percentage: (usedSystemMem / totalSystemMem) * 100
+			};
+
 			this.metrics.system.cpu.loadAverage = os.loadavg();
 		} catch {
+			// Fallback to process memory if OS module fails
+			this.metrics.system.memory = {
+				used: memUsage.heapUsed,
+				free: memUsage.heapTotal - memUsage.heapUsed,
+				total: memUsage.heapTotal,
+				percentage: (memUsage.heapUsed / memUsage.heapTotal) * 100
+			};
 			this.metrics.system.cpu.loadAverage = [0, 0, 0];
 		}
 	}
@@ -414,8 +426,8 @@ export class MetricsCollector extends EventEmitter {
 		if (this.metrics.system.memory.percentage > 90) {
 			issues.push('High memory usage (>90%)');
 			status = 'critical';
-		} else if (this.metrics.system.memory.percentage > 75) {
-			issues.push('Elevated memory usage (>75%)');
+		} else if (this.metrics.system.memory.percentage > 85) {
+			issues.push('Elevated memory usage (>85%)');
 			if (status === 'healthy') status = 'warning';
 		}
 

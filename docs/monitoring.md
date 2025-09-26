@@ -6,6 +6,7 @@ Cipher obsahuje komplexní monitorovací systém pro sledování výkonu, chyb a
 
 ### 🔍 **Metriky systému**
 - System uptime a resource usage (CPU, paměť, disk)
+- **Správné měření systémové paměti**: Používá os.totalmem() místo process.memoryUsage()
 - WebSocket connection tracking
 - API endpoint performance
 - Session management statistiky
@@ -347,14 +348,31 @@ metricsCollector.trackCustomMetric('successful_searches', searchResults.length);
 
 ## Troubleshooting
 
+### Critical Status - Falešné alarmy
+Pokud monitoring systém hlásí "Critical" status kvůli vysoké paměti (>90%), nejprve zkontrolujte:
+
+1. **Typ paměti**: Systém nyní správně měří systémovou paměť místo Node.js heap paměti
+2. **Duplicitní procesy**: Ujistěte se, že neběží více instancí API/UI serverů současně
+3. **Normální hodnoty**: 60-70% využití systémové paměti je normální pro vývojové prostředí
+
+```bash
+# Zkontrolujte aktuální status
+curl -s http://localhost:3001/api/monitoring/health
+
+# Zkontrolujte běžící procesy na portech
+netstat -ano | findstr :3001
+netstat -ano | findstr :3000
+```
+
 ### High Memory Usage
 ```typescript
-// Check detailed memory metrics
+// Check detailed memory metrics (nyní používá systémovou paměť)
 const metrics = metricsCollector.getMetrics();
 if (metrics.system.memory.percentage > 80) {
-  console.log('High memory usage detected:', {
+  console.log('High system memory usage detected:', {
     used: metrics.system.memory.used,
     total: metrics.system.memory.total,
+    percentage: metrics.system.memory.percentage,
     activeConnections: metrics.websocket.activeConnections
   });
 }

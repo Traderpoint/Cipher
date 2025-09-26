@@ -158,6 +158,34 @@ cd src/app/ui && PORT=3000 API_URL=http://localhost:3001 pnpm dev
 # Terminál 3: MCP Server
 node dist/src/app/index.cjs --mode mcp --mcp-transport-type sse --mcp-port 3002
 ```
+
+#### Řešení problémů se Standalone UI
+
+**Pokud se Standalone UI nepodaří spustit:**
+
+```bash
+# 1. Zastavte všechny procesy na portu 3000
+wmic process where ProcessId=XXXX delete
+
+# 2. Smažte Next.js cache
+cd src/app/ui && rm -rf .next
+
+# 3. Znovu spusťte s čerstvou cache
+PORT=3000 API_URL=http://localhost:3001 pnpm dev
+```
+
+**Kontrola portů:**
+```bash
+# Zkontrolujte, které porty jsou obsazené
+netstat -ano | findstr :3000
+netstat -ano | findstr :3001
+```
+
+**Sestavení před spuštěním:**
+```bash
+# Sestavte projekt před spuštěním serverů
+npx tsup
+```
 ### Používání CLI
 
 <details>

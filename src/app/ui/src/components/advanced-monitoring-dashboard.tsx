@@ -319,7 +319,7 @@ export const AdvancedMonitoringDashboard: React.FC = () => {
 
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(fetchDashboardData, 15000); // Refresh every 15 seconds
+    const interval = setInterval(fetchDashboardData, 60000); // Refresh every 60 seconds
     return () => clearInterval(interval);
   }, [autoRefresh, fetchDashboardData]);
 
