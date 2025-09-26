@@ -78,7 +78,7 @@ export class ErrorTracker {
 			...(errorStack && { stack: errorStack }),
 			type,
 			severity,
-			context,
+			...(context && { context }),
 			resolved: false
 		};
 

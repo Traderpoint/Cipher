@@ -3,6 +3,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@core/logger/index.js';
 import { WebSocketTracker } from '@core/monitoring/middleware.js';
 import {
+	WebSocketRateLimiter,
+	createConnectionRateLimiter,
+	createMessageRateLimiter,
+	createFailureRateLimiter
+} from '@core/monitoring/websocket-rate-limiter.js';
+import {
 	WebSocketConnection,
 	WebSocketResponse,
 	WebSocketConnectionStats,
@@ -21,10 +27,20 @@ export class WebSocketConnectionManager {
 	};
 	private eventSubscriber?: any; // We'll set this after initialization
 
+	// Rate limiters
+	private connectionRateLimiter: WebSocketRateLimiter;
+	private messageRateLimiter: WebSocketRateLimiter;
+	private failureRateLimiter: WebSocketRateLimiter;
+
 	constructor(
 		private maxConnections: number = 1000,
 		private connectionTimeout: number = 300000 // 5 minutes
 	) {
+		// Initialize rate limiters
+		this.connectionRateLimiter = createConnectionRateLimiter();
+		this.messageRateLimiter = createMessageRateLimiter();
+		this.failureRateLimiter = createFailureRateLimiter();
+
 		// Start connection cleanup interval
 		setInterval(() => {
 			this.cleanupStaleConnections();
@@ -41,7 +57,19 @@ export class WebSocketConnectionManager {
 	/**
 	 * Add a new WebSocket connection
 	 */
-	addConnection(ws: WebSocket, sessionId?: string): string {
+	addConnection(ws: WebSocket, sessionId?: string, clientIP?: string): string {
+		// Check connection rate limit first
+		const connectionLimit = this.connectionRateLimiter.checkLimit('new', clientIP, false);
+		if (connectionLimit.isBlocked) {
+			logger.warn('Connection rate limit exceeded', {
+				clientIP,
+				retryAfter: connectionLimit.retryAfter,
+				totalHits: connectionLimit.totalHits
+			});
+			ws.close(1008, `Rate limit exceeded. Try again in ${connectionLimit.retryAfter} seconds`);
+			throw new Error(`Connection rate limit exceeded`);
+		}
+
 		if (this.connections.size >= this.maxConnections) {
 			logger.warn('WebSocket connection limit reached', {
 				currentConnections: this.connections.size,
@@ -471,16 +499,114 @@ export class WebSocketConnectionManager {
 	}
 
 	/**
-	 * Record incoming message for stats
+	 * Record incoming message for stats with rate limiting
 	 */
-	recordIncomingMessage(): void {
+	recordIncomingMessage(connectionId: string, clientIP?: string): boolean {
+		// Check message rate limit
+		const messageLimit = this.messageRateLimiter.checkLimit(connectionId, clientIP, false);
+		if (messageLimit.isBlocked) {
+			logger.warn('Message rate limit exceeded', {
+				connectionId,
+				clientIP,
+				retryAfter: messageLimit.retryAfter,
+				totalHits: messageLimit.totalHits
+			});
+
+			// Send rate limit notification to client
+			const connection = this.connections.get(connectionId);
+			if (connection && connection.ws.readyState === WebSocket.OPEN) {
+				try {
+					connection.ws.send(JSON.stringify({
+						event: 'rateLimitExceeded',
+						data: {
+							message: 'Message rate limit exceeded',
+							retryAfter: messageLimit.retryAfter
+						},
+						timestamp: Date.now()
+					}));
+				} catch (error) {
+					logger.error('Failed to send rate limit notification', {
+						connectionId,
+						error: error instanceof Error ? error.message : String(error)
+					});
+				}
+			}
+
+			return false; // Message was rate limited
+		}
+
 		this.stats.totalMessagesReceived++;
+		return true; // Message was processed
+	}
+
+	/**
+	 * Record failed operation for failure rate limiting
+	 */
+	recordFailure(connectionId: string, clientIP?: string): void {
+		const failureLimit = this.failureRateLimiter.checkLimit(connectionId, clientIP, true);
+		if (failureLimit.isBlocked) {
+			logger.error('Failure rate limit exceeded - potential attack', {
+				connectionId,
+				clientIP,
+				retryAfter: failureLimit.retryAfter,
+				totalFailures: failureLimit.totalFailedRequests
+			});
+
+			// Force disconnect the connection if too many failures
+			this.removeConnection(connectionId);
+		}
+	}
+
+	/**
+	 * Get rate limiting statistics
+	 */
+	getRateLimitStats(): {
+		connectionLimits: any;
+		messageLimits: any;
+		failureLimits: any;
+	} {
+		return {
+			connectionLimits: this.connectionRateLimiter.getStats(),
+			messageLimits: this.messageRateLimiter.getStats(),
+			failureLimits: this.failureRateLimiter.getStats()
+		};
+	}
+
+	/**
+	 * Get rate limiting status for all active entries
+	 */
+	getRateLimitStatus(): {
+		connectionStatus: Array<{ key: string; info: any }>;
+		messageStatus: Array<{ key: string; info: any }>;
+		failureStatus: Array<{ key: string; info: any }>;
+	} {
+		return {
+			connectionStatus: this.connectionRateLimiter.getAllStatus(),
+			messageStatus: this.messageRateLimiter.getAllStatus(),
+			failureStatus: this.failureRateLimiter.getAllStatus()
+		};
+	}
+
+	/**
+	 * Reset rate limits for a specific connection/IP
+	 */
+	resetRateLimits(connectionId: string, clientIP?: string): void {
+		this.connectionRateLimiter.resetLimit(connectionId, clientIP);
+		this.messageRateLimiter.resetLimit(connectionId, clientIP);
+		this.failureRateLimiter.resetLimit(connectionId, clientIP);
+
+		logger.info('Rate limits reset', { connectionId, clientIP });
 	}
 
 	/**
 	 * Dispose of the connection manager
 	 */
 	dispose(): void {
+		// Shutdown rate limiters
+		this.connectionRateLimiter.shutdown();
+		this.messageRateLimiter.shutdown();
+		this.failureRateLimiter.shutdown();
+
 		// Close all connections
 		for (const connection of this.connections.values()) {
 			if (connection.ws.readyState === WebSocket.OPEN) {

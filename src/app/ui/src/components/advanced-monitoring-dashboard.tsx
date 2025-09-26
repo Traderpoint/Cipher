@@ -1,6 +1,10 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
+import { useAdaptiveMonitoring } from '@/hooks/useAdaptiveMonitoring';
+import { useCachedFetch } from '@/hooks/useCacheManager';
+import { ErrorBoundary } from '@/components/performance/error-boundary';
+import { VirtualTable } from '@/components/performance/virtual-list';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -202,7 +206,7 @@ const formatBytes = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+const StatusBadge: React.FC<{ status: string }> = memo(({ status }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'healthy': return 'bg-green-100 text-green-800 border-green-200';
@@ -227,7 +231,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
       {status.toUpperCase()}
     </Badge>
   );
-};
+});
 
 const MetricCard: React.FC<{
   title: string;
@@ -236,7 +240,7 @@ const MetricCard: React.FC<{
   trend?: 'up' | 'down' | 'neutral';
   subtitle?: string;
   color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'gray';
-}> = ({ title, value, icon, trend, subtitle, color = 'blue' }) => {
+}> = memo(({ title, value, icon, trend, subtitle, color = 'blue' }) => {
   const colorClasses = {
     blue: 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-200',
     green: 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-green-200',
@@ -287,41 +291,82 @@ const MetricCard: React.FC<{
       </CardContent>
     </Card>
   );
-};
+});
 
-export const AdvancedMonitoringDashboard: React.FC = () => {
+const AdvancedMonitoringDashboardInternal: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [selectedView, setSelectedView] = useState<'overview' | 'database' | 'api' | 'testing'>('overview');
 
+  // Adaptive monitoring hook
+  const {
+    refreshInterval,
+    isAdaptive,
+    handleUpdateResult,
+    setAdaptiveMode,
+    setBaseInterval,
+    getAdaptiveInfo
+  } = useAdaptiveMonitoring();
+
+  // Cached fetch with stale-while-revalidate
+  const { fetchData, loading, error, cacheStats } = useCachedFetch<DashboardData>(
+    '/api/monitoring/dashboard',
+    {},
+    {
+      defaultTTL: 30000, // 30 seconds
+      staleWhileRevalidate: true
+    }
+  );
+
   const fetchDashboardData = useCallback(async () => {
     try {
-      const response = await fetch('/api/monitoring/dashboard');
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const result = await fetchData();
+      if (result) {
+        setData(result);
+        handleUpdateResult(result.health);
       }
-      const dashboardData = await response.json();
-      setData(dashboardData);
-      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
+      const error = err instanceof Error ? err : new Error('Failed to fetch dashboard data');
       console.error('Dashboard fetch error:', err);
-    } finally {
-      setLoading(false);
+      handleUpdateResult(undefined, error);
     }
-  }, []);
+  }, [fetchData, handleUpdateResult]);
 
+  // Separate effect for initial data fetch
   useEffect(() => {
     fetchDashboardData();
-  }, [fetchDashboardData]);
+  }, []); // Run only once on mount
 
+  // Effect for auto-refresh interval
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(fetchDashboardData, 60000); // Refresh every 60 seconds
+
+    // Create stable fetch function that doesn't recreate on every interval change
+    const intervalFetch = async () => {
+      try {
+        const response = await fetch('/api/monitoring/dashboard');
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const dashboardData = await response.json();
+        setData(dashboardData);
+        setError(null);
+
+        // Update adaptive monitoring with success and health status
+        handleUpdateResult(dashboardData.health);
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Failed to fetch dashboard data');
+        setError(error.message);
+        console.error('Dashboard fetch error:', err);
+
+        // Update adaptive monitoring with error
+        handleUpdateResult(undefined, error);
+      }
+    };
+
+    const interval = setInterval(intervalFetch, refreshInterval);
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchDashboardData]);
+  }, [autoRefresh, refreshInterval, handleUpdateResult]); // Keep handleUpdateResult here but separate from main fetch
 
   if (loading) {
     return (
@@ -400,24 +445,47 @@ export const AdvancedMonitoringDashboard: React.FC = () => {
           <p className="text-gray-600 text-sm mt-1">Real-time system performance</p>
 
           {/* Auto-refresh controls */}
-          <div className="flex gap-2 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className="bg-white text-xs"
-            >
-              {autoRefresh ? <Pause className="w-3 h-3 mr-1" /> : <Play className="w-3 h-3 mr-1" />}
-              {autoRefresh ? 'Pause' : 'Auto'}
-            </Button>
-            <Button
-              size="sm"
-              onClick={fetchDashboardData}
-              className="bg-blue-500 hover:bg-blue-600 text-white text-xs"
-            >
-              <RefreshCw className="w-3 h-3 mr-1" />
-              Refresh
-            </Button>
+          <div className="flex flex-col gap-2 mt-4">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className="bg-white text-xs"
+              >
+                {autoRefresh ? <Pause className="w-3 h-3 mr-1" /> : <Play className="w-3 h-3 mr-1" />}
+                {autoRefresh ? 'Pause' : 'Auto'}
+              </Button>
+              <Button
+                size="sm"
+                onClick={fetchDashboardData}
+                className="bg-blue-500 hover:bg-blue-600 text-white text-xs"
+              >
+                <RefreshCw className="w-3 h-3 mr-1" />
+                Refresh
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAdaptiveMode(!isAdaptive)}
+                className={`text-xs ${isAdaptive ? 'bg-green-50 text-green-700 border-green-300' : 'bg-white'}`}
+              >
+                <Zap className={`w-3 h-3 mr-1 ${isAdaptive ? 'text-green-600' : ''}`} />
+                {isAdaptive ? 'Smart' : 'Fixed'}
+              </Button>
+            </div>
+
+            {/* Adaptive monitoring info */}
+            {autoRefresh && (
+              <div className="text-xs text-gray-500">
+                Refresh: {(refreshInterval / 1000)}s
+                {isAdaptive && (
+                  <span className="text-green-600 ml-1">
+                    ({getAdaptiveInfo().intervalType})
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -884,3 +952,10 @@ export const AdvancedMonitoringDashboard: React.FC = () => {
     </div>
   );
 };
+
+// Wrap with ErrorBoundary and memoization
+export const AdvancedMonitoringDashboard: React.FC = memo(() => (
+  <ErrorBoundary>
+    <AdvancedMonitoringDashboardInternal />
+  </ErrorBoundary>
+));

@@ -290,16 +290,25 @@ export class DashboardManager {
 		avgMetricsPerHour: number;
 		totalConfigs: number;
 	} {
-		const stats = {
+		const stats: {
+			totalDataPoints: number;
+			oldestDataPoint?: Date;
+			newestDataPoint?: Date;
+			avgMetricsPerHour: number;
+			totalConfigs: number;
+		} = {
 			totalDataPoints: this.historicalData.length,
-			oldestDataPoint: this.historicalData.length > 0 ? this.historicalData[this.historicalData.length - 1].timestamp : undefined,
-			newestDataPoint: this.historicalData.length > 0 ? this.historicalData[0].timestamp : undefined,
 			avgMetricsPerHour: 0,
 			totalConfigs: 0
 		};
 
+		if (this.historicalData.length > 0) {
+			stats.oldestDataPoint = this.historicalData[this.historicalData.length - 1]!.timestamp;
+			stats.newestDataPoint = this.historicalData[0]!.timestamp;
+		}
+
 		if (stats.oldestDataPoint && stats.newestDataPoint) {
-			const hoursDiff = (stats.newestDataPoint.getTime() - stats.oldestDataPoint.getTime()) / (1000 * 60 * 60);
+			const hoursDiff = (stats.newestDataPoint!.getTime() - stats.oldestDataPoint!.getTime()) / (1000 * 60 * 60);
 			stats.avgMetricsPerHour = hoursDiff > 0 ? this.historicalData.length / hoursDiff : 0;
 		}
 

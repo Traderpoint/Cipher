@@ -7,6 +7,8 @@ export interface SystemMetrics {
 		free: number;
 		total: number;
 		percentage: number;
+		external?: number;
+		arrayBuffers?: number;
 	};
 	cpu: {
 		percentage: number;
@@ -45,6 +47,13 @@ export interface MemoryMetrics {
 	averageSearchTime: number;
 	totalSearches: number;
 	memoryEfficiencyScore: number;
+	vectorOperations?: {
+		searches: number;
+		insertions: number;
+		deletions: number;
+		updates?: number;
+		averageLatency: number;
+	};
 	topSearchPatterns: Array<{
 		pattern: string;
 		count: number;
@@ -59,6 +68,9 @@ export interface WebSocketMetrics {
 	messagesSent: number;
 	averageConnectionDuration: number;
 	connectionErrors: number;
+	averageLatency?: number;
+	peakConnections?: number;
+	bytesTransferred?: number;
 }
 
 export interface APIMetrics {
@@ -67,10 +79,37 @@ export interface APIMetrics {
 	averageResponseTime: Record<string, number>;
 	errorsByEndpoint: Record<string, number>;
 	requestsPerMinute: number;
+	statusCodes?: Record<string, number>;
+	throughput?: {
+		requestsPerSecond: number;
+		averageResponseTime: number;
+	};
 	popularEndpoints: Array<{
 		endpoint: string;
 		count: number;
 		averageTime: number;
+	}>;
+}
+
+export interface PostgreSQLMetrics {
+	totalConnections: number;
+	activeConnections: number;
+	idleConnections: number;
+	maxConnections: number;
+	totalQueries: number;
+	failedQueries: number;
+	avgQueryTime: number;
+	averageQueryTime?: number; // Alias pro avgQueryTime
+	slowQueries?: number;
+	connectionErrors?: number;
+	poolUtilization?: number;
+	replicationLag?: number;
+	poolStatus: string;
+	databaseSize?: string;
+	tableStats?: Array<{
+		table: string;
+		rows: number;
+		size: string;
 	}>;
 }
 
@@ -81,11 +120,15 @@ export interface AllMetrics {
 	memory: MemoryMetrics;
 	websocket: WebSocketMetrics;
 	api: APIMetrics;
+	postgresql?: PostgreSQLMetrics;
 	sessions: {
 		total: number;
 		active: number;
 		averageMessageCount: number;
 		totalMessages: number;
+		averageDuration?: number;
+		newSessions?: number;
+		expiredSessions?: number;
 	};
 }
 

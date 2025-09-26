@@ -384,7 +384,7 @@ export class AlertManager extends EventEmitter {
 
 		// Reset rule triggers
 		for (const rule of this.rules.values()) {
-			rule.lastTriggered = undefined;
+			delete rule.lastTriggered;
 		}
 
 		logger.info('AlertManager reset');

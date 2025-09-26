@@ -20,6 +20,7 @@ import type { DatabaseBackend } from './database-backend.js';
 import type { PostgresBackendConfig } from '../config.js';
 import { StorageError, StorageConnectionError } from './types.js';
 import { createLogger, type Logger } from '../../logger/index.js';
+import { DatabaseOptimizer, defaultOptimizationConfig, type QueryOptimizationConfig } from '../../monitoring/database-optimizer.js';
 
 /**
  * PostgreSQL Database Backend
@@ -56,6 +57,7 @@ export class PostgresBackend implements DatabaseBackend {
 	private connected = false;
 	private readonly config: PostgresBackendConfig;
 	private readonly logger: Logger;
+	private optimizer: DatabaseOptimizer | undefined;
 
 	// Prepared statement cache
 	private statements: Map<string, string> = new Map();
@@ -124,10 +126,23 @@ export class PostgresBackend implements DatabaseBackend {
 		try {
 			this.logger.info('Connecting to PostgreSQL database');
 
+			// Initialize database optimizer
+			const optimizationConfig: QueryOptimizationConfig = {
+				...defaultOptimizationConfig,
+				connectionPool: {
+					...defaultOptimizationConfig.connectionPool,
+					max: this.config.maxConnections || 20,
+					min: Math.min(2, (this.config.maxConnections || 20) / 4)
+				}
+			};
+
+			this.optimizer = DatabaseOptimizer.getInstance(optimizationConfig);
+
 			// Build connection configuration
 			const poolConfig = this.buildPoolConfig();
 
-			// Create connection pool
+			// Initialize optimized pool
+			await this.optimizer.initializePool(poolConfig);
 			this.pool = new Pool(poolConfig);
 
 			// Test connection
@@ -141,6 +156,12 @@ export class PostgresBackend implements DatabaseBackend {
 
 			// Create tables if they don't exist
 			await this.createTables();
+
+			// Create optimized indexes
+			if (this.optimizer) {
+				await this.optimizer.createOptimizedIndexes();
+				await this.optimizer.createPartitionedTables();
+			}
 
 			this.connected = true;
 			this.logger.info('PostgreSQL backend connected successfully', {
@@ -173,6 +194,13 @@ export class PostgresBackend implements DatabaseBackend {
 
 		try {
 			await this.pool.end();
+
+			// Shutdown optimizer
+			if (this.optimizer) {
+				await this.optimizer.shutdown();
+				this.optimizer = undefined;
+			}
+
 			this.connected = false;
 			this.pool = undefined;
 			this.logger.info('PostgreSQL backend disconnected');

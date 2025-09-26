@@ -194,12 +194,12 @@ class BashSession extends EventEmitter {
 
 						if (platform() === 'win32') {
 							// For Windows, find the last prompt line and take content after it
-							const lines = beforeMarker.split(/\r?\n/);
+							const lines = beforeMarker?.split(/\r?\n/) || [];
 							let contentStartIndex = -1;
 
 							// Find the last command prompt line
 							for (let i = lines.length - 1; i >= 0; i--) {
-								if (lines[i].match(/^[A-Z]:\\.+>/)) {
+								if (lines[i]?.match(/^[A-Z]:\\.+>/)) {
 									contentStartIndex = i + 1;
 									break;
 								}
@@ -212,7 +212,7 @@ class BashSession extends EventEmitter {
 							}
 						} else {
 							// Unix: simpler approach
-							output = beforeMarker.trim();
+							output = beforeMarker?.trim() || '';
 						}
 					}
 

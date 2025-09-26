@@ -263,7 +263,7 @@ export class MetricsBatchProcessor {
 		// Add to batch when buffer reaches threshold
 		if (buffer.searches.length >= 20) {
 			// Convert Map to array for serialization
-			const patterns = Array.from(buffer.patterns.entries()).map(([pattern, stats]) => ({
+			const patterns = Array.from(buffer.patterns.entries() as IterableIterator<[string, any]>).map(([pattern, stats]) => ({
 				pattern,
 				count: stats.count,
 				averageRelevance: stats.totalRelevance / stats.count

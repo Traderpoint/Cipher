@@ -84,13 +84,21 @@ export class LLMPerformanceTracker {
 					}
 				}
 
-				tracker.endRequest(requestId, {
+				const endRequestData: any = {
 					success: true,
 					tokensUsed,
-					inputTokens: inputTokens > 0 ? inputTokens : undefined,
-					outputTokens: outputTokens > 0 ? outputTokens : undefined,
 					response: result
-				});
+				};
+
+				if (inputTokens > 0) {
+					endRequestData.inputTokens = inputTokens;
+				}
+
+				if (outputTokens > 0) {
+					endRequestData.outputTokens = outputTokens;
+				}
+
+				tracker.endRequest(requestId, endRequestData);
 
 				return result;
 			} catch (error) {
