@@ -295,6 +295,7 @@ const MetricCard: React.FC<{
 
 const AdvancedMonitoringDashboardInternal: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [selectedView, setSelectedView] = useState<'overview' | 'database' | 'api' | 'testing'>('overview');
 
@@ -309,7 +310,7 @@ const AdvancedMonitoringDashboardInternal: React.FC = () => {
   } = useAdaptiveMonitoring();
 
   // Cached fetch with stale-while-revalidate
-  const { fetchData, loading, error, cacheStats } = useCachedFetch<DashboardData>(
+  const { fetchData, loading, error: fetchError, cacheStats } = useCachedFetch<DashboardData>(
     '/api/monitoring/dashboard',
     {},
     {
@@ -573,6 +574,18 @@ const AdvancedMonitoringDashboardInternal: React.FC = () => {
 
         {/* Main Content Area */}
         <div className="flex-1 overflow-y-auto p-8 bg-gray-50">
+          {/* Error Alert */}
+          {(error || fetchError) && (
+            <div className="mb-6">
+              <Alert className="border-2 border-red-200 bg-red-50">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800">
+                  {error || fetchError}
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+
           {/* Health Status Alert */}
           {data.health?.status !== 'healthy' && data.health?.status && (
             <div className="mb-6">

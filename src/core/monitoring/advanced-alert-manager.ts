@@ -692,8 +692,19 @@ export class AdvancedAlertManager extends EventEmitter {
     const sorted = [...historicalValues].sort((a, b) => a - b);
     const q1 = sorted[Math.floor(sorted.length * 0.25)];
     const q3 = sorted[Math.floor(sorted.length * 0.75)];
-    const iqr = q3 - q1;
 
+    if (q1 === undefined || q3 === undefined) {
+      return {
+        isAnomaly: false,
+        score: 0,
+        confidence: 0,
+        explanation: 'Insufficient data for IQR analysis',
+        historicalBaseline: 0,
+        expectedRange: [0, 0]
+      };
+    }
+
+    const iqr = q3 - q1;
     const lowerBound = q1 - 1.5 * iqr;
     const upperBound = q3 + 1.5 * iqr;
 

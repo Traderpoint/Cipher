@@ -440,7 +440,12 @@ export class CustomMetricsManager extends EventEmitter {
         filteredValues = filteredValues.slice(0, query.limit);
       }
 
-      const result = {
+      const result: {
+        metricId: string;
+        name: string;
+        values: MetricValue[];
+        aggregated?: Record<string, number>;
+      } = {
         metricId,
         name: definition.name,
         values: filteredValues
@@ -559,19 +564,24 @@ export class CustomMetricsManager extends EventEmitter {
     for (const metricData of this.data.values()) {
       const definition = metricData.definition;
 
-      metricsByType[definition.type]++;
-      metricsByCategory[definition.category] = (metricsByCategory[definition.category] || 0) + 1;
+      metricsByType[definition.type] = (metricsByType[definition.type] || 0) + 1;
+      const category = definition.tags?.category || 'uncategorized';
+      metricsByCategory[category] = (metricsByCategory[category] || 0) + 1;
 
       // Find oldest and newest data points
       if (metricData.history.length > 0) {
-        const oldest = metricData.history[0].timestamp;
-        const newest = metricData.history[metricData.history.length - 1].timestamp;
+        const firstEntry = metricData.history[0];
+        const lastEntry = metricData.history[metricData.history.length - 1];
+        if (firstEntry && lastEntry) {
+          const oldest = firstEntry.timestamp;
+          const newest = lastEntry.timestamp;
 
-        if (!oldestDataPoint || oldest < oldestDataPoint) {
-          oldestDataPoint = oldest;
-        }
-        if (!newestDataPoint || newest > newestDataPoint) {
-          newestDataPoint = newest;
+          if (!oldestDataPoint || oldest < oldestDataPoint) {
+            oldestDataPoint = oldest;
+          }
+          if (!newestDataPoint || newest > newestDataPoint) {
+            newestDataPoint = newest;
+          }
         }
       }
     }
@@ -586,8 +596,8 @@ export class CustomMetricsManager extends EventEmitter {
       metricsByCategory,
       activeCollectors: Array.from(this.collectors.values()).filter(c => c.enabled).length,
       memoryUsage,
-      oldestDataPoint,
-      newestDataPoint
+      ...(oldestDataPoint && { oldestDataPoint }),
+      ...(newestDataPoint && { newestDataPoint })
     };
   }
 

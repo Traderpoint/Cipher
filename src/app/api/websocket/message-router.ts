@@ -21,7 +21,7 @@ export class WebSocketMessageRouter {
 	): Promise<void> {
 		try {
 			// Record incoming message for stats
-			this.connectionManager.recordIncomingMessage();
+			this.connectionManager.recordIncomingMessage(connectionId);
 
 			// Validate message format
 			if (!this.isValidMessage(message)) {

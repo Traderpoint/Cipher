@@ -160,7 +160,7 @@ export class OptimizedDashboardManager {
     } = {}
   ): Promise<HistoricalData[] | NodeJS.ReadableStream> {
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
-    const useAggregated = options.useAggregated && this.config.aggregation.enableDownsampling;
+    const useAggregated = Boolean(options.useAggregated && this.config.aggregation.enableDownsampling);
 
     if (options.enableStreaming && this.config.performance.enableStreaming) {
       return this.createDataStream(cutoff, useAggregated, options.aggregationInterval);
@@ -437,8 +437,13 @@ export class OptimizedDashboardManager {
 
       // Maintain memory cache size
       if (this.memoryCache.size > this.config.storage.maxMemoryItems) {
-        const oldestKey = Array.from(this.memoryCache.keys())[0];
-        this.memoryCache.delete(oldestKey);
+        const keys = Array.from(this.memoryCache.keys());
+        if (keys.length > 0) {
+          const oldestKey = keys[0];
+          if (oldestKey !== undefined) {
+            this.memoryCache.delete(oldestKey);
+          }
+        }
       }
 
       // Flush if queue is full
@@ -460,8 +465,16 @@ export class OptimizedDashboardManager {
       const dataToWrite = [...this.writeQueue];
       this.writeQueue = [];
 
+      if (dataToWrite.length === 0) {
+        return;
+      }
+
       // Create time-based partition
-      const partitionId = this.generatePartitionId(dataToWrite[0].timestamp);
+      const firstItem = dataToWrite[0];
+      if (!firstItem) {
+        throw new Error('Empty data array in flushWriteQueue');
+      }
+      const partitionId = this.generatePartitionId(firstItem.timestamp);
       const partitionPath = join(this.partitionsPath, `${partitionId}.json`);
 
       let dataBuffer = Buffer.from(JSON.stringify(dataToWrite));
@@ -475,10 +488,14 @@ export class OptimizedDashboardManager {
       await writeFile(partitionPath, dataBuffer);
 
       // Update partition registry
+      const lastItem = dataToWrite[dataToWrite.length - 1];
+      if (!lastItem) {
+        throw new Error('Empty data array in partition creation');
+      }
       const partition: DataPartition = {
         id: partitionId,
-        startTime: dataToWrite[0].timestamp,
-        endTime: dataToWrite[dataToWrite.length - 1].timestamp,
+        startTime: firstItem.timestamp,
+        endTime: lastItem.timestamp,
         filePath: partitionPath,
         compressed: this.config.compression.enabled,
         itemCount: dataToWrite.length,

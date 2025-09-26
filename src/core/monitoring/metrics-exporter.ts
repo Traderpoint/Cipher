@@ -54,7 +54,7 @@ export class MetricsExporter {
           data = this.formatAsJSON(metrics, timestamp);
           break;
         case 'csv':
-          data = this.formatAsCSV([{ timestamp, ...metrics }]);
+          data = this.formatAsCSV([{ ...metrics, exportedAt: timestamp }]);
           break;
         case 'xlsx':
           throw new Error('XLSX format not yet implemented');
@@ -170,10 +170,10 @@ export class MetricsExporter {
 
       await writeFile(filePath, exportResult.data, 'utf8');
 
+      const { data: _, ...resultWithoutData } = exportResult;
       const result: ExportResult = {
-        ...exportResult,
-        filePath,
-        data: undefined // Don't return data when saving to file
+        ...resultWithoutData,
+        filePath
       };
 
       logger.info('Metrics exported to file successfully', {

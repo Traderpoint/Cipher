@@ -8,7 +8,7 @@ export interface AlertRule {
 	name: string;
 	condition: string;
 	threshold: number;
-	severity: 'info' | 'warning' | 'critical';
+	severity: 'info' | 'warning' | 'critical' | 'emergency';
 	enabled: boolean;
 	cooldown: number; // milliseconds
 	lastTriggered?: number;
@@ -19,7 +19,7 @@ export interface Alert {
 	id: string;
 	ruleId: string;
 	ruleName: string;
-	severity: 'info' | 'warning' | 'critical';
+	severity: 'info' | 'warning' | 'critical' | 'emergency';
 	message: string;
 	value: number;
 	threshold: number;

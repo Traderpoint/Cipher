@@ -133,7 +133,6 @@ export class DatabaseOptimizer {
       max: this.config.connectionPool.max,
       idleTimeoutMillis: this.config.connectionPool.idleTimeoutMillis,
       connectionTimeoutMillis: this.config.connectionPool.connectionTimeoutMillis,
-      acquireTimeoutMillis: this.config.connectionPool.acquireTimeoutMillis,
       maxUses: this.config.connectionPool.maxUses || 7500,
 
       // Performance optimizations
@@ -392,7 +391,7 @@ export class DatabaseOptimizer {
         const tableName = index.table;
         const columns = index.columns.join(', ');
         const indexType = index.type.toUpperCase();
-        const uniqueClause = index.unique ? 'UNIQUE' : '';
+        const uniqueClause = 'unique' in index && index.unique === true ? 'UNIQUE' : '';
 
         // Check if index already exists
         const existsQuery = `
