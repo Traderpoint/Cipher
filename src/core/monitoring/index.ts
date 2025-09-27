@@ -80,18 +80,21 @@ export class MonitoringIntegration {
 				issues: [...health.issues, ...errorHealth.issues]
 			},
 			system: metrics.system,
-			services: {
-				api: {
+			services: [
+				{
+					name: 'api',
 					status: 'running',
 					requests: metrics.api.totalRequests,
 					errors: errorStats.errorsByType.api || 0
 				},
-				websocket: {
+				{
+					name: 'websocket',
 					status: metrics.websocket.activeConnections > 0 ? 'active' : 'idle',
 					connections: metrics.websocket.activeConnections,
 					errors: errorStats.errorsByType.websocket || 0
 				},
-				llm: Object.entries(metrics.llm).map(([key, llm]) => ({
+				...Object.entries(metrics.llm).map(([key, llm]) => ({
+					name: `llm-${key}`,
 					provider: key.split(':')[0],
 					model: key.split(':')[1],
 					status: llm.lastRequestTime && (Date.now() - llm.lastRequestTime.getTime()) < 300000 ? 'active' : 'idle',
@@ -99,13 +102,14 @@ export class MonitoringIntegration {
 					errors: llm.failedRequests,
 					avgResponseTime: llm.averageResponseTime
 				})),
-				memory: {
+				{
+					name: 'memory',
 					status: metrics.memory.totalKnowledge > 0 ? 'active' : 'idle',
 					knowledge: metrics.memory.totalKnowledge,
 					searches: metrics.memory.totalSearches,
 					errors: errorStats.errorsByType.memory || 0
 				}
-			},
+			],
 			errors: {
 				total: errorStats.totalErrors,
 				recent: errorStats.recentErrors,
