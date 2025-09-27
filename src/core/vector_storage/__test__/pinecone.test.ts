@@ -33,6 +33,7 @@ describe('PineconeBackend', () => {
 		vi.clearAllMocks();
 
 		config = {
+			type: 'pinecone',
 			apiKey: 'test-api-key',
 			collectionName: 'test-index',
 			dimension: 384,
@@ -539,8 +540,8 @@ describe('PineconeBackend', () => {
 		it('should handle null and undefined filter values', async () => {
 			const testQuery = new Array(384).fill(0);
 			const filters = {
-				nullValue: null,
-				undefinedValue: undefined,
+				nullValue: null as any,
+				undefinedValue: undefined as any,
 				validValue: 'test',
 			};
 

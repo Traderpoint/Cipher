@@ -268,18 +268,20 @@ router.get('/jobs/:jobId', async (req: Request, res: Response): Promise<void> =>
 
     const { jobId } = req.params;
     if (!jobId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Job ID is required',
         code: 'MISSING_JOB_ID'
       });
+      return;
     }
     const job = await backupManager.getBackupStatus(jobId);
 
     if (!job) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Backup job not found',
         code: 'BACKUP_JOB_NOT_FOUND'
       });
+      return;
     }
 
     res.json({
@@ -298,6 +300,7 @@ router.get('/jobs/:jobId', async (req: Request, res: Response): Promise<void> =>
         metadata: job.metadata,
       },
     });
+    return;
 
   } catch (error) {
     logger.error('Failed to get backup job status:', error);
@@ -306,6 +309,7 @@ router.get('/jobs/:jobId', async (req: Request, res: Response): Promise<void> =>
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'BACKUP_JOB_STATUS_ERROR'
     });
+    return;
   }
 });
 
@@ -325,18 +329,20 @@ router.delete('/jobs/:jobId', async (req: Request, res: Response): Promise<void>
 
     const { jobId } = req.params;
     if (!jobId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Job ID is required',
         code: 'MISSING_JOB_ID'
       });
+      return;
     }
     const cancelled = await backupManager.cancelBackup(jobId);
 
     if (!cancelled) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Backup job not found or cannot be cancelled',
         code: 'BACKUP_JOB_CANCEL_FAILED'
       });
+      return;
     }
 
     res.json({
@@ -347,6 +353,7 @@ router.delete('/jobs/:jobId', async (req: Request, res: Response): Promise<void>
         message: 'Backup job cancelled successfully',
       },
     });
+    return;
 
   } catch (error) {
     logger.error('Failed to cancel backup job:', error);
@@ -355,6 +362,7 @@ router.delete('/jobs/:jobId', async (req: Request, res: Response): Promise<void>
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'BACKUP_JOB_CANCEL_ERROR'
     });
+    return;
   }
 });
 
@@ -517,10 +525,11 @@ router.delete('/:backupId', async (req: Request, res: Response): Promise<void> =
 
     const { backupId } = req.params;
     if (!backupId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Backup ID is required',
         code: 'MISSING_BACKUP_ID'
       });
+      return;
     }
     const deleted = await backupManager.deleteBackup(backupId);
 
@@ -532,6 +541,7 @@ router.delete('/:backupId', async (req: Request, res: Response): Promise<void> =
         message: deleted ? 'Backup deleted successfully' : 'Backup deletion failed',
       },
     });
+    return;
 
   } catch (error) {
     logger.error('Failed to delete backup:', error);
@@ -540,6 +550,7 @@ router.delete('/:backupId', async (req: Request, res: Response): Promise<void> =
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'BACKUP_DELETE_ERROR'
     });
+    return;
   }
 });
 
@@ -559,10 +570,11 @@ router.post('/verify/:backupId', async (req: Request, res: Response): Promise<vo
 
     const { backupId } = req.params;
     if (!backupId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Backup ID is required',
         code: 'MISSING_BACKUP_ID'
       });
+      return;
     }
     const verificationType = req.body.type as VerificationType || 'checksum';
 
@@ -577,6 +589,7 @@ router.post('/verify/:backupId', async (req: Request, res: Response): Promise<vo
         message: isValid ? 'Backup verification passed' : 'Backup verification failed',
       },
     });
+    return;
 
   } catch (error) {
     logger.error('Failed to verify backup:', error);
@@ -585,6 +598,7 @@ router.post('/verify/:backupId', async (req: Request, res: Response): Promise<vo
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'BACKUP_VERIFY_ERROR'
     });
+    return;
   }
 });
 
@@ -794,20 +808,22 @@ router.put('/schedules/:jobId', validateUpdateSchedule, async (req: Request, res
 
     const { jobId } = req.params;
     if (!jobId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Job ID is required',
         code: 'MISSING_JOB_ID'
       });
+      return;
     }
     const updates = req.body;
 
     const updated = await backupScheduler.updateSchedule(jobId, updates);
 
     if (!updated) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Scheduled job not found',
         code: 'SCHEDULE_NOT_FOUND'
       });
+      return;
     }
 
     res.json({
@@ -818,6 +834,7 @@ router.put('/schedules/:jobId', validateUpdateSchedule, async (req: Request, res
         message: 'Backup schedule updated successfully',
       },
     });
+    return;
 
   } catch (error) {
     logger.error('Failed to update backup schedule:', error);
@@ -826,6 +843,7 @@ router.put('/schedules/:jobId', validateUpdateSchedule, async (req: Request, res
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'SCHEDULE_UPDATE_ERROR'
     });
+    return;
   }
 });
 
@@ -845,18 +863,20 @@ router.delete('/schedules/:jobId', async (req: Request, res: Response): Promise<
 
     const { jobId } = req.params;
     if (!jobId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Job ID is required',
         code: 'MISSING_JOB_ID'
       });
+      return;
     }
     const removed = await backupScheduler.removeSchedule(jobId);
 
     if (!removed) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Scheduled job not found',
         code: 'SCHEDULE_NOT_FOUND'
       });
+      return;
     }
 
     res.json({
@@ -867,6 +887,7 @@ router.delete('/schedules/:jobId', async (req: Request, res: Response): Promise<
         message: 'Backup schedule removed successfully',
       },
     });
+    return;
 
   } catch (error) {
     logger.error('Failed to remove backup schedule:', error);
@@ -875,6 +896,7 @@ router.delete('/schedules/:jobId', async (req: Request, res: Response): Promise<
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'SCHEDULE_REMOVE_ERROR'
     });
+    return;
   }
 });
 
@@ -894,27 +916,30 @@ router.post('/schedules/:jobId/toggle', async (req: Request, res: Response): Pro
 
     const { jobId } = req.params;
     if (!jobId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Job ID is required',
         code: 'MISSING_JOB_ID'
       });
+      return;
     }
     const { enabled } = req.body;
 
     if (typeof enabled !== 'boolean') {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'enabled parameter must be a boolean',
         code: 'INVALID_PARAMETER'
       });
+      return;
     }
 
     const toggled = await backupScheduler.toggleSchedule(jobId, enabled);
 
     if (!toggled) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Scheduled job not found',
         code: 'SCHEDULE_NOT_FOUND'
       });
+      return;
     }
 
     res.json({
@@ -925,6 +950,7 @@ router.post('/schedules/:jobId/toggle', async (req: Request, res: Response): Pro
         message: `Backup schedule ${enabled ? 'enabled' : 'disabled'} successfully`,
       },
     });
+    return;
 
   } catch (error) {
     logger.error('Failed to toggle backup schedule:', error);
@@ -933,6 +959,7 @@ router.post('/schedules/:jobId/toggle', async (req: Request, res: Response): Pro
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'SCHEDULE_TOGGLE_ERROR'
     });
+    return;
   }
 });
 
@@ -952,10 +979,11 @@ router.post('/schedules/:jobId/run', async (req: Request, res: Response): Promis
 
     const { jobId } = req.params;
     if (!jobId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Job ID is required',
         code: 'MISSING_JOB_ID'
       });
+      return;
     }
     const result = await backupScheduler.runJobNow(jobId);
 
@@ -971,6 +999,7 @@ router.post('/schedules/:jobId/run', async (req: Request, res: Response): Promis
         message: result.success ? 'Scheduled job executed successfully' : 'Scheduled job execution failed',
       },
     });
+    return;
 
   } catch (error) {
     logger.error('Failed to run scheduled job:', error);
@@ -979,6 +1008,7 @@ router.post('/schedules/:jobId/run', async (req: Request, res: Response): Promis
       message: error instanceof Error ? error.message : 'Unknown error',
       code: 'SCHEDULE_RUN_ERROR'
     });
+    return;
   }
 });
 

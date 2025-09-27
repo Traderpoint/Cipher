@@ -85,7 +85,7 @@ export class PerformanceMonitor {
     }
 
     // Send to metrics collector
-    metricsCollector.recordOperationPerformance(metric);
+    metricsCollector.recordOperationPerformance(metric.operation, metric.duration, metric.metadata);
   }
 
   /**

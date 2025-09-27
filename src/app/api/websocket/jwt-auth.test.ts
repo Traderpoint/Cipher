@@ -334,33 +334,37 @@ describe('WebSocketJWTAuth', () => {
       expect(middleware).toBeTypeOf('function');
     });
 
-    it('should call next with error for invalid authentication', (done) => {
-      const middleware = auth.authMiddleware();
-      const request: MockRequest = {
-        headers: {}
-      };
+    it('should call next with error for invalid authentication', () => {
+      return new Promise<void>((resolve) => {
+        const middleware = auth.authMiddleware();
+        const request: MockRequest = {
+          headers: {}
+        };
 
-      middleware(mockWs as any, request, (error) => {
-        expect(error).toBeInstanceOf(Error);
-        expect(error?.message).toBe('WebSocket authentication failed');
-        done();
+        middleware(mockWs as any, request, (error) => {
+          expect(error).toBeInstanceOf(Error);
+          expect(error?.message).toBe('WebSocket authentication failed');
+          resolve();
+        });
       });
     });
 
-    it('should call next without error for valid authentication', (done) => {
-      const payload = { permissions: ['read'] };
-      const token = auth.generateToken(payload);
-      const request: MockRequest = {
-        url: `/?token=${token}`,
-        headers: {}
-      };
+    it('should call next without error for valid authentication', () => {
+      return new Promise<void>((resolve) => {
+        const payload = { permissions: ['read'] };
+        const token = auth.generateToken(payload);
+        const request: MockRequest = {
+          url: `/?token=${token}`,
+          headers: {}
+        };
 
-      const middleware = auth.authMiddleware();
+        const middleware = auth.authMiddleware();
 
-      middleware(mockWs as any, request, (error) => {
-        expect(error).toBeUndefined();
-        expect((mockWs as any).isAuthenticated).toBe(true);
-        done();
+        middleware(mockWs as any, request, (error) => {
+          expect(error).toBeUndefined();
+          expect((mockWs as any).isAuthenticated).toBe(true);
+          resolve();
+        });
       });
     });
   });
@@ -382,7 +386,9 @@ describe('WebSocketJWTAuth', () => {
 
     it('should use HS256 algorithm for token signing', () => {
       const token = auth.generateToken({ permissions: ['test'] });
-      const header = JSON.parse(Buffer.from(token.split('.')[0], 'base64').toString());
+      const tokenPart = token.split('.')[0];
+      expect(tokenPart).toBeDefined();
+      const header = JSON.parse(Buffer.from(tokenPart!, 'base64').toString());
 
       expect(header.alg).toBe('HS256');
     });
@@ -422,7 +428,10 @@ describe('WebSocketJWTAuth', () => {
       ];
 
       invalidUrls.forEach(url => {
-        const request: MockRequest = { url, headers: {} };
+        const request: MockRequest = { headers: {} };
+        if (url !== undefined) {
+          request.url = url;
+        }
         const extracted = auth.extractTokenFromRequest(request);
         expect(extracted).toBeOneOf([null, '']);
       });

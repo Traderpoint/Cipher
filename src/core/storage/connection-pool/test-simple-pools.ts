@@ -48,7 +48,7 @@ async function testBasicPoolFunctionality(): Promise<void> {
     const mockRedisConfig = {
       type: 'mock_redis' as const,
       host: 'localhost',
-      database: 0,
+      database: '0',
     };
 
     const redisConnection = await poolSystem.acquire(mockRedisConfig);

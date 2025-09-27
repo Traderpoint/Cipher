@@ -9,7 +9,8 @@
 
 import neo4j, { type Driver, type Config } from 'neo4j-driver';
 import { createLogger, type Logger } from '../../../logger/index.js';
-import type { PoolFactory, PoolConfig, Neo4jPoolConfig, DATABASE_DEFAULTS } from '../types.js';
+import type { PoolFactory, PoolConfig, Neo4jPoolConfig } from '../types.js';
+import { DATABASE_DEFAULTS } from '../types.js';
 
 /**
  * Neo4j Pool Factory
@@ -193,9 +194,7 @@ export class Neo4jPoolFactory implements PoolFactory<Driver> {
 			},
 
 			// Resolver settings for routing
-			resolver: {
-				address: (address) => [address], // Use default resolver
-			},
+			resolver: (address: string) => [address], // Use default resolver
 		};
 
 		return driverConfig;

@@ -9,7 +9,8 @@
 
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { createLogger, type Logger } from '../../../logger/index.js';
-import type { PoolFactory, PoolConfig, QdrantPoolConfig, DATABASE_DEFAULTS } from '../types.js';
+import type { PoolFactory, PoolConfig, QdrantPoolConfig } from '../types.js';
+import { DATABASE_DEFAULTS } from '../types.js';
 
 /**
  * Qdrant Pool Factory

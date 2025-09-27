@@ -21,6 +21,8 @@ import type {
 	WeaviatePoolConfig,
 	PgVectorPoolConfig,
 	BasePoolConfig,
+} from './types.js';
+import {
 	DEFAULT_POOL_CONFIG,
 	DATABASE_DEFAULTS,
 } from './types.js';
@@ -127,16 +129,33 @@ export class PoolConfigManager {
 	 */
 	getPostgresConfig(overrides: Partial<PostgresPoolConfig> = {}): PostgresPoolConfig {
 		const envConfig: Partial<PostgresPoolConfig> = {
-			type: 'postgres',
-			host: this.envConfig.POSTGRES_HOST,
-			port: this.envConfig.POSTGRES_PORT ? parseInt(this.envConfig.POSTGRES_PORT, 10) : undefined,
-			database: this.envConfig.POSTGRES_DATABASE,
-			user: this.envConfig.POSTGRES_USER,
-			password: this.envConfig.POSTGRES_PASSWORD,
-			url: this.envConfig.POSTGRES_URL,
-			max: this.envConfig.POSTGRES_MAX_CONNECTIONS ? parseInt(this.envConfig.POSTGRES_MAX_CONNECTIONS, 10) : undefined,
-			min: this.envConfig.POSTGRES_MIN_CONNECTIONS ? parseInt(this.envConfig.POSTGRES_MIN_CONNECTIONS, 10) : undefined,
+			type: 'postgres'
 		};
+
+		if (this.envConfig.POSTGRES_HOST !== undefined) {
+			envConfig.host = this.envConfig.POSTGRES_HOST;
+		}
+		if (this.envConfig.POSTGRES_PORT) {
+			envConfig.port = parseInt(this.envConfig.POSTGRES_PORT, 10);
+		}
+		if (this.envConfig.POSTGRES_DATABASE !== undefined) {
+			envConfig.database = this.envConfig.POSTGRES_DATABASE;
+		}
+		if (this.envConfig.POSTGRES_USER !== undefined) {
+			envConfig.user = this.envConfig.POSTGRES_USER;
+		}
+		if (this.envConfig.POSTGRES_PASSWORD !== undefined) {
+			envConfig.password = this.envConfig.POSTGRES_PASSWORD;
+		}
+		if (this.envConfig.POSTGRES_URL !== undefined) {
+			envConfig.url = this.envConfig.POSTGRES_URL;
+		}
+		if (this.envConfig.POSTGRES_MAX_CONNECTIONS) {
+			envConfig.max = parseInt(this.envConfig.POSTGRES_MAX_CONNECTIONS, 10);
+		}
+		if (this.envConfig.POSTGRES_MIN_CONNECTIONS) {
+			envConfig.min = parseInt(this.envConfig.POSTGRES_MIN_CONNECTIONS, 10);
+		}
 
 		return this.createConfig({ ...envConfig, ...overrides }) as PostgresPoolConfig;
 	}
@@ -146,16 +165,33 @@ export class PoolConfigManager {
 	 */
 	getRedisConfig(overrides: Partial<RedisPoolConfig> = {}): RedisPoolConfig {
 		const envConfig: Partial<RedisPoolConfig> = {
-			type: 'redis',
-			host: this.envConfig.REDIS_HOST,
-			port: this.envConfig.REDIS_PORT ? parseInt(this.envConfig.REDIS_PORT, 10) : undefined,
-			password: this.envConfig.REDIS_PASSWORD,
-			username: this.envConfig.REDIS_USERNAME,
-			database: this.envConfig.REDIS_DATABASE ? parseInt(this.envConfig.REDIS_DATABASE, 10) : undefined,
-			url: this.envConfig.REDIS_URL,
-			max: this.envConfig.REDIS_MAX_CONNECTIONS ? parseInt(this.envConfig.REDIS_MAX_CONNECTIONS, 10) : undefined,
-			min: this.envConfig.REDIS_MIN_CONNECTIONS ? parseInt(this.envConfig.REDIS_MIN_CONNECTIONS, 10) : undefined,
+			type: 'redis'
 		};
+
+		if (this.envConfig.REDIS_HOST !== undefined) {
+			envConfig.host = this.envConfig.REDIS_HOST;
+		}
+		if (this.envConfig.REDIS_PORT) {
+			envConfig.port = parseInt(this.envConfig.REDIS_PORT, 10);
+		}
+		if (this.envConfig.REDIS_PASSWORD !== undefined) {
+			envConfig.password = this.envConfig.REDIS_PASSWORD;
+		}
+		if (this.envConfig.REDIS_USERNAME !== undefined) {
+			envConfig.username = this.envConfig.REDIS_USERNAME;
+		}
+		if (this.envConfig.REDIS_DATABASE) {
+			envConfig.database = parseInt(this.envConfig.REDIS_DATABASE, 10);
+		}
+		if (this.envConfig.REDIS_URL !== undefined) {
+			envConfig.url = this.envConfig.REDIS_URL;
+		}
+		if (this.envConfig.REDIS_MAX_CONNECTIONS) {
+			envConfig.max = parseInt(this.envConfig.REDIS_MAX_CONNECTIONS, 10);
+		}
+		if (this.envConfig.REDIS_MIN_CONNECTIONS) {
+			envConfig.min = parseInt(this.envConfig.REDIS_MIN_CONNECTIONS, 10);
+		}
 
 		return this.createConfig({ ...envConfig, ...overrides }) as RedisPoolConfig;
 	}
@@ -166,15 +202,28 @@ export class PoolConfigManager {
 	getNeo4jConfig(overrides: Partial<Neo4jPoolConfig> = {}): Neo4jPoolConfig {
 		const envConfig: Partial<Neo4jPoolConfig> = {
 			type: 'neo4j',
-			uri: this.envConfig.NEO4J_URI,
-			host: this.envConfig.NEO4J_HOST,
-			port: this.envConfig.NEO4J_PORT ? parseInt(this.envConfig.NEO4J_PORT, 10) : undefined,
 			username: this.envConfig.NEO4J_USERNAME || 'neo4j',
-			password: this.envConfig.NEO4J_PASSWORD || '',
-			database: this.envConfig.NEO4J_DATABASE,
-			max: this.envConfig.NEO4J_MAX_CONNECTIONS ? parseInt(this.envConfig.NEO4J_MAX_CONNECTIONS, 10) : undefined,
-			min: this.envConfig.NEO4J_MIN_CONNECTIONS ? parseInt(this.envConfig.NEO4J_MIN_CONNECTIONS, 10) : undefined,
+			password: this.envConfig.NEO4J_PASSWORD || ''
 		};
+
+		if (this.envConfig.NEO4J_URI !== undefined) {
+			envConfig.uri = this.envConfig.NEO4J_URI;
+		}
+		if (this.envConfig.NEO4J_HOST !== undefined) {
+			envConfig.host = this.envConfig.NEO4J_HOST;
+		}
+		if (this.envConfig.NEO4J_PORT) {
+			envConfig.port = parseInt(this.envConfig.NEO4J_PORT, 10);
+		}
+		if (this.envConfig.NEO4J_DATABASE !== undefined) {
+			envConfig.database = this.envConfig.NEO4J_DATABASE;
+		}
+		if (this.envConfig.NEO4J_MAX_CONNECTIONS) {
+			envConfig.max = parseInt(this.envConfig.NEO4J_MAX_CONNECTIONS, 10);
+		}
+		if (this.envConfig.NEO4J_MIN_CONNECTIONS) {
+			envConfig.min = parseInt(this.envConfig.NEO4J_MIN_CONNECTIONS, 10);
+		}
 
 		return this.createConfig({ ...envConfig, ...overrides }) as Neo4jPoolConfig;
 	}
@@ -185,11 +234,20 @@ export class PoolConfigManager {
 	getQdrantConfig(overrides: Partial<QdrantPoolConfig> = {}): QdrantPoolConfig {
 		const envConfig: Partial<QdrantPoolConfig> = {
 			type: 'qdrant',
-			url: this.envConfig.VECTOR_STORE_URL,
-			host: this.envConfig.VECTOR_STORE_HOST,
-			port: this.envConfig.VECTOR_STORE_PORT ? parseInt(this.envConfig.VECTOR_STORE_PORT, 10) : undefined,
-			apiKey: this.envConfig.VECTOR_STORE_API_KEY,
 		};
+
+		if (this.envConfig.VECTOR_STORE_URL !== undefined) {
+			envConfig.url = this.envConfig.VECTOR_STORE_URL;
+		}
+		if (this.envConfig.VECTOR_STORE_HOST !== undefined) {
+			envConfig.host = this.envConfig.VECTOR_STORE_HOST;
+		}
+		if (this.envConfig.VECTOR_STORE_PORT !== undefined) {
+			envConfig.port = parseInt(this.envConfig.VECTOR_STORE_PORT, 10);
+		}
+		if (this.envConfig.VECTOR_STORE_API_KEY !== undefined) {
+			envConfig.apiKey = this.envConfig.VECTOR_STORE_API_KEY;
+		}
 
 		return this.createConfig({ ...envConfig, ...overrides }) as QdrantPoolConfig;
 	}
@@ -200,12 +258,23 @@ export class PoolConfigManager {
 	getMilvusConfig(overrides: Partial<MilvusPoolConfig> = {}): MilvusPoolConfig {
 		const envConfig: Partial<MilvusPoolConfig> = {
 			type: 'milvus',
-			url: this.envConfig.VECTOR_STORE_URL,
-			host: this.envConfig.VECTOR_STORE_HOST,
-			port: this.envConfig.VECTOR_STORE_PORT ? parseInt(this.envConfig.VECTOR_STORE_PORT, 10) : undefined,
-			username: this.envConfig.VECTOR_STORE_USERNAME,
-			password: this.envConfig.VECTOR_STORE_PASSWORD,
 		};
+
+		if (this.envConfig.VECTOR_STORE_URL !== undefined) {
+			envConfig.url = this.envConfig.VECTOR_STORE_URL;
+		}
+		if (this.envConfig.VECTOR_STORE_HOST !== undefined) {
+			envConfig.host = this.envConfig.VECTOR_STORE_HOST;
+		}
+		if (this.envConfig.VECTOR_STORE_PORT !== undefined) {
+			envConfig.port = parseInt(this.envConfig.VECTOR_STORE_PORT, 10);
+		}
+		if (this.envConfig.VECTOR_STORE_USERNAME !== undefined) {
+			envConfig.username = this.envConfig.VECTOR_STORE_USERNAME;
+		}
+		if (this.envConfig.VECTOR_STORE_PASSWORD !== undefined) {
+			envConfig.password = this.envConfig.VECTOR_STORE_PASSWORD;
+		}
 
 		return this.createConfig({ ...envConfig, ...overrides }) as MilvusPoolConfig;
 	}
@@ -278,7 +347,7 @@ export class PoolConfigManager {
 		return {
 			...globalDefaults,
 			...typeDefaults,
-			type,
+			type: type as any,
 		};
 	}
 
@@ -286,34 +355,34 @@ export class PoolConfigManager {
 	 * Load configuration from environment variables
 	 */
 	private loadEnvironmentConfig(): EnvConfig {
-		return {
+		const envConfig: any = {
 			// PostgreSQL
-			POSTGRES_HOST: process.env.POSTGRES_HOST || env.POSTGRES_HOST,
-			POSTGRES_PORT: process.env.POSTGRES_PORT || env.POSTGRES_PORT?.toString(),
-			POSTGRES_DATABASE: process.env.POSTGRES_DATABASE || env.POSTGRES_DATABASE,
-			POSTGRES_USER: process.env.POSTGRES_USER || env.POSTGRES_USER,
-			POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD || env.POSTGRES_PASSWORD,
-			POSTGRES_URL: process.env.POSTGRES_URL || env.POSTGRES_URL,
+			POSTGRES_HOST: process.env.POSTGRES_HOST,
+			POSTGRES_PORT: process.env.POSTGRES_PORT,
+			POSTGRES_DATABASE: process.env.POSTGRES_DATABASE,
+			POSTGRES_USER: process.env.POSTGRES_USER || (env as any).POSTGRES_USER,
+			POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD || (env as any).POSTGRES_PASSWORD,
+			POSTGRES_URL: process.env.POSTGRES_URL || (env as any).POSTGRES_URL,
 			POSTGRES_MAX_CONNECTIONS: process.env.POSTGRES_MAX_CONNECTIONS,
 			POSTGRES_MIN_CONNECTIONS: process.env.POSTGRES_MIN_CONNECTIONS,
 
 			// Redis
-			REDIS_HOST: process.env.REDIS_HOST || env.REDIS_HOST,
-			REDIS_PORT: process.env.REDIS_PORT || env.REDIS_PORT?.toString(),
-			REDIS_PASSWORD: process.env.REDIS_PASSWORD || env.REDIS_PASSWORD,
-			REDIS_USERNAME: process.env.REDIS_USERNAME || env.REDIS_USERNAME,
-			REDIS_DATABASE: process.env.REDIS_DATABASE || env.REDIS_DATABASE?.toString(),
-			REDIS_URL: process.env.REDIS_URL || env.REDIS_URL,
+			REDIS_HOST: process.env.REDIS_HOST || (env as any).REDIS_HOST,
+			REDIS_PORT: process.env.REDIS_PORT || (env as any).REDIS_PORT?.toString(),
+			REDIS_PASSWORD: process.env.REDIS_PASSWORD || (env as any).REDIS_PASSWORD,
+			REDIS_USERNAME: process.env.REDIS_USERNAME || (env as any).REDIS_USERNAME,
+			REDIS_DATABASE: process.env.REDIS_DATABASE || (env as any).REDIS_DATABASE?.toString(),
+			REDIS_URL: process.env.REDIS_URL || (env as any).REDIS_URL,
 			REDIS_MAX_CONNECTIONS: process.env.REDIS_MAX_CONNECTIONS,
 			REDIS_MIN_CONNECTIONS: process.env.REDIS_MIN_CONNECTIONS,
 
 			// Neo4j
-			NEO4J_URI: process.env.NEO4J_URI || env.NEO4J_URI,
-			NEO4J_HOST: process.env.NEO4J_HOST || env.NEO4J_HOST,
-			NEO4J_PORT: process.env.NEO4J_PORT || env.NEO4J_PORT?.toString(),
-			NEO4J_USERNAME: process.env.NEO4J_USERNAME || env.NEO4J_USERNAME,
-			NEO4J_PASSWORD: process.env.NEO4J_PASSWORD || env.NEO4J_PASSWORD,
-			NEO4J_DATABASE: process.env.NEO4J_DATABASE || env.NEO4J_DATABASE,
+			NEO4J_URI: process.env.NEO4J_URI || (env as any).NEO4J_URI,
+			NEO4J_HOST: process.env.NEO4J_HOST || (env as any).NEO4J_HOST,
+			NEO4J_PORT: process.env.NEO4J_PORT || (env as any).NEO4J_PORT?.toString(),
+			NEO4J_USERNAME: process.env.NEO4J_USERNAME || (env as any).NEO4J_USERNAME,
+			NEO4J_PASSWORD: process.env.NEO4J_PASSWORD || (env as any).NEO4J_PASSWORD,
+			NEO4J_DATABASE: process.env.NEO4J_DATABASE || (env as any).NEO4J_DATABASE,
 			NEO4J_MAX_CONNECTIONS: process.env.NEO4J_MAX_CONNECTIONS,
 			NEO4J_MIN_CONNECTIONS: process.env.NEO4J_MIN_CONNECTIONS,
 
@@ -331,6 +400,8 @@ export class PoolConfigManager {
 			DEFAULT_POOL_IDLE_TIMEOUT: process.env.DEFAULT_POOL_IDLE_TIMEOUT,
 			DEFAULT_POOL_ACQUIRE_TIMEOUT: process.env.DEFAULT_POOL_ACQUIRE_TIMEOUT,
 		};
+
+		return envConfig;
 	}
 }
 

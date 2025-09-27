@@ -341,8 +341,8 @@ describe('DefaultChromaPayloadAdapter', () => {
 		});
 
 		it('should handle non-object inputs', () => {
-			const serialized1 = adapter.serialize(null);
-			const serialized2 = adapter.serialize(undefined);
+			const serialized1 = adapter.serialize(null as any);
+			const serialized2 = adapter.serialize(undefined as any);
 			// @ts-expect-error - testing invalid input
 			const serialized3 = adapter.serialize('string');
 

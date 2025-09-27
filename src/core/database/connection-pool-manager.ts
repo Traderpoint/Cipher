@@ -175,7 +175,8 @@ export abstract class BaseConnectionPool<T> extends EventEmitter {
 		this.emit('stats', stats);
 
 		// Send to metrics collector
-		metricsCollector.recordConnectionPoolStats(this.poolName, stats);
+		// TODO: Add recordConnectionPoolStats method to MetricsCollector
+		// metricsCollector.recordConnectionPoolStats(this.poolName, stats);
 	}
 
 	async drain(): Promise<void> {

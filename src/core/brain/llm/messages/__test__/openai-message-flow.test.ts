@@ -114,7 +114,7 @@ describe('OpenAI Message Flow Validation', () => {
 
 			// Should remove the orphaned tool message
 			expect(repairedMessages).toHaveLength(3);
-			expect(repairedMessages.map(m => m.role)).toEqual(['user', 'assistant', 'user']);
+			expect(repairedMessages.map((m: any) => m.role)).toEqual(['user', 'assistant', 'user']);
 		});
 
 		it('should keep valid tool messages and remove invalid ones', async () => {
@@ -151,7 +151,7 @@ describe('OpenAI Message Flow Validation', () => {
 
 			// Should keep valid tool message, remove invalid one
 			expect(repairedMessages).toHaveLength(4);
-			expect(repairedMessages.map(m => m.role)).toEqual(['user', 'assistant', 'tool', 'assistant']);
+			expect(repairedMessages.map((m: any) => m.role)).toEqual(['user', 'assistant', 'tool', 'assistant']);
 			expect(repairedMessages[2].toolCallId).toBe('call_valid');
 		});
 
@@ -190,12 +190,12 @@ describe('OpenAI Message Flow Validation', () => {
 
 			// Should keep the 2 valid tool messages, remove the invalid one
 			expect(repairedMessages).toHaveLength(5);
-			const roles = repairedMessages.map(m => m.role);
+			const roles = repairedMessages.map((m: any) => m.role);
 			expect(roles).toEqual(['user', 'assistant', 'tool', 'tool', 'assistant']);
 
 			// Check that correct tool call IDs are preserved
-			const toolMessages = repairedMessages.filter(m => m.role === 'tool');
-			expect(toolMessages.map(m => m.toolCallId)).toEqual(['call_1', 'call_2']);
+			const toolMessages = repairedMessages.filter((m: any) => m.role === 'tool');
+			expect(toolMessages.map((m: any) => m.toolCallId)).toEqual(['call_1', 'call_2']);
 		});
 
 		it('should reset tool call tracking after user messages', async () => {
@@ -231,7 +231,7 @@ describe('OpenAI Message Flow Validation', () => {
 
 			// Should remove the orphaned tool message after the second user message
 			expect(repairedMessages).toHaveLength(5);
-			expect(repairedMessages.map(m => m.role)).toEqual([
+			expect(repairedMessages.map((m: any) => m.role)).toEqual([
 				'user',
 				'assistant',
 				'tool',
@@ -265,7 +265,7 @@ describe('OpenAI Message Flow Validation', () => {
 
 			// Should remove the orphaned tool message
 			expect(repairedMessages).toHaveLength(2);
-			expect(repairedMessages.map(m => m.role)).toEqual(['user', 'assistant']);
+			expect(repairedMessages.map((m: any) => m.role)).toEqual(['user', 'assistant']);
 		});
 
 		it('should handle assistant messages with empty toolCalls array', async () => {
@@ -282,7 +282,7 @@ describe('OpenAI Message Flow Validation', () => {
 
 			// Should remove the orphaned tool message
 			expect(repairedMessages).toHaveLength(2);
-			expect(repairedMessages.map(m => m.role)).toEqual(['user', 'assistant']);
+			expect(repairedMessages.map((m: any) => m.role)).toEqual(['user', 'assistant']);
 		});
 	});
 });

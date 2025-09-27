@@ -7,7 +7,6 @@
 
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { glob } from 'glob';
 import { promisify } from 'util';
 import { exec } from 'child_process';
 import {

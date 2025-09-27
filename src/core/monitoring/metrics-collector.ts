@@ -498,6 +498,37 @@ export class MetricsCollector extends EventEmitter {
 		return { status, issues };
 	}
 
+	// Counter methods for compatibility with other monitoring systems
+	incrementCounter(name: string, labels?: Record<string, string>): void {
+		// Implementation for counter increment - could be extended to track counters
+		this.emit('counterIncrement', { name, labels });
+	}
+
+	recordHistogram(name: string, value: number, labels?: Record<string, string>): void {
+		// Implementation for histogram recording - could be extended to track histograms
+		this.emit('histogramRecord', { name, value, labels });
+	}
+
+	recordGauge(name: string, value: number, labels?: Record<string, string>): void {
+		// Implementation for gauge recording - could be extended to track gauges
+		this.emit('gaugeRecord', { name, value, labels });
+	}
+
+	recordCacheStats(stats: any): void {
+		// Implementation for cache stats recording
+		this.emit('cacheStats', stats);
+	}
+
+	recordOperationPerformance(operation: string, duration: number, metadata?: any): void {
+		// Implementation for operation performance recording
+		this.emit('operationPerformance', { operation, duration, metadata });
+	}
+
+	recordMemoryUsage(usage: any): void {
+		// Implementation for memory usage recording
+		this.emit('memoryUsage', usage);
+	}
+
 	reset(): void {
 		this.metrics = this.initializeMetrics();
 		this.llmRequestTimes.clear();

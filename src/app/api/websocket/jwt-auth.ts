@@ -10,6 +10,7 @@ export interface JWTPayload {
 	permissions?: string[];
 	iat?: number;
 	exp?: number;
+	iss?: string;
 }
 
 export interface AuthenticatedWebSocket extends WebSocket {

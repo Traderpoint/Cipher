@@ -9,7 +9,8 @@
 
 import { MilvusClient } from '@zilliz/milvus2-sdk-node';
 import { createLogger, type Logger } from '../../../logger/index.js';
-import type { PoolFactory, PoolConfig, MilvusPoolConfig, DATABASE_DEFAULTS } from '../types.js';
+import type { PoolFactory, PoolConfig, MilvusPoolConfig } from '../types.js';
+import { DATABASE_DEFAULTS } from '../types.js';
 
 /**
  * Milvus Pool Factory

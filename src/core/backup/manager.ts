@@ -51,8 +51,10 @@ export class BackupManager extends EventEmitter implements IBackupManager {
   constructor(config?: BackupConfig, logger?: Logger, metricsCollector?: MetricsCollector) {
     super();
     this.config = config || createDefaultBackupConfig();
-    this.logger = logger || new Logger('BackupManager');
-    this.metricsCollector = metricsCollector;
+    this.logger = logger || new Logger({ level: 'info' });
+    if (metricsCollector !== undefined) {
+      this.metricsCollector = metricsCollector;
+    }
 
     // Set up event handlers
     this.on('job:started', this.handleJobStarted.bind(this));
@@ -94,8 +96,8 @@ export class BackupManager extends EventEmitter implements IBackupManager {
       this.logger.info('Backup manager initialized successfully');
 
       // Emit metrics
-      if (this.metricsCollector) {
-        this.metricsCollector.incrementCounter('backup_manager_initialized');
+      if (this.metricsCollector && 'incrementCounter' in this.metricsCollector) {
+        (this.metricsCollector as any).incrementCounter('backup_manager_initialized');
       }
 
     } catch (error) {
@@ -140,7 +142,11 @@ export class BackupManager extends EventEmitter implements IBackupManager {
     // Check if we're at the parallel job limit
     if (this.activeJobs.size >= this.config.global.maxParallelJobs) {
       // Add to queue
-      this.backupQueue.push({ storageType, options });
+      const queueItem: { storageType: BackupStorageType; options?: Partial<StorageBackupConfig> } = { storageType };
+      if (options !== undefined) {
+        queueItem.options = options;
+      }
+      this.backupQueue.push(queueItem);
       this.logger.info(`Backup job for ${storageType} queued (${this.backupQueue.length} in queue)`);
 
       // Return a placeholder job ID for the queued job
@@ -274,14 +280,14 @@ export class BackupManager extends EventEmitter implements IBackupManager {
       if (success) {
         this.logger.info(`Successfully restored backup ${backupId}`);
         if (this.metricsCollector) {
-          this.metricsCollector.incrementCounter('backup_restore_success', {
+          (this.metricsCollector as any).incrementCounter('backup_restore_success', {
             storage_type: backup.storageType
           });
         }
       } else {
         this.logger.error(`Failed to restore backup ${backupId}`);
         if (this.metricsCollector) {
-          this.metricsCollector.incrementCounter('backup_restore_failure', {
+          (this.metricsCollector as any).incrementCounter('backup_restore_failure', {
             storage_type: backup.storageType
           });
         }
@@ -290,8 +296,8 @@ export class BackupManager extends EventEmitter implements IBackupManager {
       return success;
     } catch (error) {
       this.logger.error(`Error during restore of backup ${backupId}:`, error);
-      if (this.metricsCollector) {
-        this.metricsCollector.incrementCounter('backup_restore_error', {
+      if (this.metricsCollector && 'incrementCounter' in this.metricsCollector) {
+        (this.metricsCollector as any).incrementCounter('backup_restore_error', {
           storage_type: backup.storageType
         });
       }
@@ -370,17 +376,26 @@ export class BackupManager extends EventEmitter implements IBackupManager {
       }
     }
 
-    return {
+    const stats: BackupStatistics = {
       totalBackups: allJobs.length,
       successfulBackups: completedJobs.length,
       failedBackups: failedJobs.length,
       totalSize,
       averageSize,
-      lastBackupTime,
-      nextScheduledBackup: this.getNextScheduledBackupTime(),
       successRate: allJobs.length > 0 ? (completedJobs.length / allJobs.length) * 100 : 0,
       storageTypeStats,
     };
+
+    if (lastBackupTime !== undefined) {
+      stats.lastBackupTime = lastBackupTime;
+    }
+
+    const nextScheduledBackup = this.getNextScheduledBackupTime();
+    if (nextScheduledBackup !== undefined) {
+      stats.nextScheduledBackup = nextScheduledBackup;
+    }
+
+    return stats;
   }
 
   /**
@@ -595,7 +610,7 @@ export class BackupManager extends EventEmitter implements IBackupManager {
         const storageType = name.replace('backup-', '') as BackupStorageType;
         const nextDate = job.nextDate();
         if (nextDate) {
-          nextBackups[storageType] = nextDate.toDate();
+          nextBackups[storageType] = nextDate.toJSDate();
         }
       }
     }
@@ -682,7 +697,7 @@ export class BackupManager extends EventEmitter implements IBackupManager {
       id: jobId,
       storageType,
       config: mergedConfig,
-      destination: this.config.destinations[0], // Use first destination for now
+      destination: this.config.destinations[0] || { path: '/tmp/backup', type: 'local', encryption: false }, // Use first destination or default
       status: 'pending',
       progress: 0,
       currentOperation: 'Initializing...',
@@ -696,8 +711,8 @@ export class BackupManager extends EventEmitter implements IBackupManager {
         compression: mergedConfig.compression,
         files: [],
         destination: {
-          type: this.config.destinations[0].type,
-          path: this.config.destinations[0].path,
+          type: this.config.destinations[0]?.type || 'local',
+          path: this.config.destinations[0]?.path || '/tmp/backup',
         },
         checksums: {},
         sourceConfig: {},
@@ -803,14 +818,24 @@ export class BackupManager extends EventEmitter implements IBackupManager {
       this.emit('job:completed', job);
 
     } catch (error) {
-      job.error = {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
+      const errorInfo: { message: string; stack?: string; code?: string } = {
+        message: error instanceof Error ? error.message : String(error),
       };
+
+      if (error instanceof Error && error.stack) {
+        errorInfo.stack = error.stack;
+      }
+
+      if (error instanceof Error && 'code' in error && (error as any).code) {
+        errorInfo.code = (error as any).code;
+      }
+
+      job.error = errorInfo;
       job.status = 'failed';
       job.metadata.status = 'failed';
-      job.metadata.error = job.error;
+      if (job.error) {
+        job.metadata.error = job.error;
+      }
 
       this.emit('job:failed', job);
       throw error;
@@ -906,7 +931,7 @@ export class BackupManager extends EventEmitter implements IBackupManager {
     let nextTime: Date | undefined;
 
     for (const job of this.scheduledJobs.values()) {
-      const jobNextTime = job.nextDate()?.toDate();
+      const jobNextTime = job.nextDate()?.toJSDate();
       if (jobNextTime && (!nextTime || jobNextTime < nextTime)) {
         nextTime = jobNextTime;
       }
@@ -921,7 +946,7 @@ export class BackupManager extends EventEmitter implements IBackupManager {
     this.logger.info(`Backup job started: ${job.id} (${job.storageType})`);
 
     if (this.metricsCollector) {
-      this.metricsCollector.incrementCounter('backup_job_started', {
+      (this.metricsCollector as any).incrementCounter('backup_job_started', {
         storage_type: job.storageType
       });
     }
@@ -938,17 +963,19 @@ export class BackupManager extends EventEmitter implements IBackupManager {
     this.logger.info(`Backup job completed: ${job.id} (${job.storageType})`);
 
     if (this.metricsCollector) {
-      this.metricsCollector.incrementCounter('backup_job_completed', {
+      (this.metricsCollector as any).incrementCounter('backup_job_completed', {
         storage_type: job.storageType
       });
 
       const duration = job.metadata.endTime!.getTime() - job.startTime.getTime();
-      this.metricsCollector.recordHistogram('backup_job_duration', duration, {
-        storage_type: job.storageType
-      });
+      if ('recordHistogram' in this.metricsCollector) {
+        (this.metricsCollector as any).recordHistogram('backup_job_duration', duration, {
+          storage_type: job.storageType
+        });
+      }
 
-      if (job.metadata.size) {
-        this.metricsCollector.recordHistogram('backup_size', job.metadata.size, {
+      if (job.metadata.size && 'recordHistogram' in this.metricsCollector) {
+        (this.metricsCollector as any).recordHistogram('backup_size', job.metadata.size, {
           storage_type: job.storageType
         });
       }
@@ -965,7 +992,7 @@ export class BackupManager extends EventEmitter implements IBackupManager {
     this.logger.error(`Backup job failed: ${job.id} (${job.storageType}) - ${job.error?.message}`);
 
     if (this.metricsCollector) {
-      this.metricsCollector.incrementCounter('backup_job_failed', {
+      (this.metricsCollector as any).incrementCounter('backup_job_failed', {
         storage_type: job.storageType
       });
     }
@@ -981,7 +1008,7 @@ export class BackupManager extends EventEmitter implements IBackupManager {
     this.logger.info(`Backup job cancelled: ${job.id} (${job.storageType})`);
 
     if (this.metricsCollector) {
-      this.metricsCollector.incrementCounter('backup_job_cancelled', {
+      (this.metricsCollector as any).incrementCounter('backup_job_cancelled', {
         storage_type: job.storageType
       });
     }

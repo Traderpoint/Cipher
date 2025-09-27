@@ -9,7 +9,8 @@
 
 import { Pool, type PoolClient, type PoolConfig as PgPoolConfig } from 'pg';
 import { createLogger, type Logger } from '../../../logger/index.js';
-import type { PoolFactory, PoolConfig, PostgresPoolConfig, DATABASE_DEFAULTS } from '../types.js';
+import type { PoolFactory, PoolConfig, PostgresPoolConfig } from '../types.js';
+import { DATABASE_DEFAULTS } from '../types.js';
 
 /**
  * PostgreSQL Pool Factory

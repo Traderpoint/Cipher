@@ -59,7 +59,7 @@ export class BackupScheduler extends EventEmitter {
 
   constructor(logger?: Logger, metricsCollector?: MetricsCollector) {
     super();
-    this.logger = logger || new Logger('BackupScheduler');
+    this.logger = logger || new Logger({ level: 'info' });
     this.metricsCollector = metricsCollector;
   }
 
@@ -158,7 +158,7 @@ export class BackupScheduler extends EventEmitter {
         enabled: schedule.enabled,
         runCount: 0,
         errorCount: 0,
-        nextRun: cronJob.nextDate()?.toDate(),
+        nextRun: cronJob.nextDate()?.toJSDate(),
       };
 
       this.scheduledJobs.set(jobId, scheduledJob);
@@ -220,7 +220,7 @@ export class BackupScheduler extends EventEmitter {
       enabled: true,
       runCount: 0,
       errorCount: 0,
-      nextRun: cronJob.nextDate()?.toDate(),
+      nextRun: cronJob.nextDate()?.toJSDate(),
     };
 
     this.scheduledJobs.set(jobId, scheduledJob);
@@ -264,7 +264,7 @@ export class BackupScheduler extends EventEmitter {
       enabled: schedule.enabled,
       runCount: 0,
       errorCount: 0,
-      nextRun: cronJob.nextDate()?.toDate(),
+      nextRun: cronJob.nextDate()?.toJSDate(),
     };
 
     this.scheduledJobs.set(jobId, scheduledJob);
@@ -314,7 +314,7 @@ export class BackupScheduler extends EventEmitter {
 
     if (enabled) {
       job.cronJob.start();
-      job.nextRun = job.cronJob.nextDate()?.toDate();
+      job.nextRun = job.cronJob.nextDate()?.toJSDate();
       this.logger.info(`Enabled schedule: ${job.name} (${jobId})`);
     } else {
       job.cronJob.stop();
@@ -356,7 +356,7 @@ export class BackupScheduler extends EventEmitter {
     // Start if enabled
     if (job.enabled && job.schedule.enabled) {
       newCronJob.start();
-      job.nextRun = newCronJob.nextDate()?.toDate();
+      job.nextRun = newCronJob.nextDate()?.toJSDate();
     }
 
     this.logger.info(`Updated schedule: ${job.name} (${jobId})`);
@@ -395,7 +395,7 @@ export class BackupScheduler extends EventEmitter {
     const executions: Record<string, Date | null> = {};
 
     for (const [jobId, job] of this.scheduledJobs) {
-      executions[jobId] = job.enabled ? job.cronJob.nextDate()?.toDate() || null : null;
+      executions[jobId] = job.enabled ? job.cronJob.nextDate()?.toJSDate() || null : null;
     }
 
     return executions;
@@ -519,7 +519,7 @@ export class BackupScheduler extends EventEmitter {
     try {
       // Update job info
       job.lastRun = startTime;
-      job.nextRun = job.cronJob.nextDate()?.toDate();
+      job.nextRun = job.cronJob.nextDate()?.toJSDate();
 
       // Execute backup with timeout
       const timeoutMs = job.schedule.timeout * 60 * 1000; // Convert minutes to milliseconds
@@ -588,7 +588,7 @@ export class BackupScheduler extends EventEmitter {
 
     try {
       job.lastRun = startTime;
-      job.nextRun = job.cronJob.nextDate()?.toDate();
+      job.nextRun = job.cronJob.nextDate()?.toJSDate();
 
       const deletedCount = await this.backupManager!.cleanupOldBackups();
 
@@ -673,7 +673,7 @@ export class BackupScheduler extends EventEmitter {
 
     for (const job of this.scheduledJobs.values()) {
       if (job.enabled) {
-        const jobNextTime = job.cronJob.nextDate()?.toDate();
+        const jobNextTime = job.cronJob.nextDate()?.toJSDate();
         if (jobNextTime && (!nextTime || jobNextTime < nextTime)) {
           nextTime = jobNextTime;
         }

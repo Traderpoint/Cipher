@@ -75,9 +75,9 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
 
       // Get Redis info
       const info = await client.info();
-      const configInfo = await client.config('GET', '*');
+      const configInfo = await client.config('GET', '*') as string[];
       const dbSize = await client.dbsize();
-      const memory = await client.memory('usage');
+      const memory = await client.memory('STATS');
 
       // Parse info string
       const infoLines = info.split('\r\n');
@@ -94,8 +94,14 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
 
       // Parse config
       const parsedConfig: Record<string, any> = {};
-      for (let i = 0; i < configInfo.length; i += 2) {
-        parsedConfig[configInfo[i]] = configInfo[i + 1];
+      if (Array.isArray(configInfo)) {
+        for (let i = 0; i < configInfo.length; i += 2) {
+          const key = configInfo[i];
+          const value = configInfo[i + 1];
+          if (key !== undefined && value !== undefined) {
+            parsedConfig[key] = value;
+          }
+        }
       }
 
       return {
@@ -137,8 +143,11 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
 
       for (const line of infoLines) {
         if (line.startsWith('used_memory:')) {
-          usedMemory = parseInt(line.split(':')[1], 10);
-          break;
+          const value = line.split(':')[1];
+          if (value !== undefined) {
+            usedMemory = parseInt(value, 10);
+            break;
+          }
         }
       }
 
@@ -251,10 +260,10 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
   /**
    * Cleanup Redis client connection
    */
-  async cleanup(): Promise<void> {
+  override async cleanup(): Promise<void> {
     if (this.client) {
       await this.client.quit();
-      this.client = undefined;
+      delete (this as any).client;
     }
   }
 
@@ -274,10 +283,14 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
         this.config = {
           host: env.STORAGE_CACHE_HOST,
           port: env.STORAGE_CACHE_PORT || 6379,
-          password: env.STORAGE_CACHE_PASSWORD,
-          username: env.STORAGE_CACHE_USERNAME,
           database: env.STORAGE_CACHE_DATABASE || 0,
         };
+        if (env.STORAGE_CACHE_PASSWORD !== undefined) {
+          this.config.password = env.STORAGE_CACHE_PASSWORD;
+        }
+        if (env.STORAGE_CACHE_USERNAME !== undefined) {
+          this.config.username = env.STORAGE_CACHE_USERNAME;
+        }
       }
     }
 
@@ -289,9 +302,13 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
         this.config = {
           host: env.VECTOR_STORE_HOST,
           port: env.VECTOR_STORE_PORT || 6379,
-          password: env.VECTOR_STORE_PASSWORD,
-          username: env.VECTOR_STORE_USERNAME,
         };
+        if (env.VECTOR_STORE_PASSWORD !== undefined) {
+          this.config.password = env.VECTOR_STORE_PASSWORD;
+        }
+        if (env.VECTOR_STORE_USERNAME !== undefined) {
+          this.config.username = env.VECTOR_STORE_USERNAME;
+        }
       }
     }
 
@@ -314,15 +331,17 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
     if (config.url) {
       this.client = new Redis(config.url);
     } else {
-      this.client = new Redis({
-        host: config.host,
-        port: config.port,
-        password: config.password,
-        username: config.username,
-        db: config.database,
-        retryDelayOnFailover: 100,
+      const redisOptions: any = {
         maxRetriesPerRequest: 3,
-      });
+      };
+
+      if (config.host !== undefined) redisOptions.host = config.host;
+      if (config.port !== undefined) redisOptions.port = config.port;
+      if (config.password !== undefined) redisOptions.password = config.password;
+      if (config.username !== undefined) redisOptions.username = config.username;
+      if (config.database !== undefined) redisOptions.db = config.database;
+
+      this.client = new Redis(redisOptions);
     }
 
     return this.client;
@@ -362,6 +381,11 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
 
       const redisDataDir = (configInfo as string[])[1];
       const rdbFilename = (dbFilename as string[])[1];
+
+      if (redisDataDir === undefined || rdbFilename === undefined) {
+        throw new Error('Unable to determine Redis data directory or RDB filename');
+      }
+
       const rdbPath = path.join(redisDataDir, rdbFilename);
 
       // Copy RDB file to backup destination
@@ -404,6 +428,11 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
 
       const redisDataDir = (configInfo as string[])[1];
       const aofFile = (aofFilename as string[])[1];
+
+      if (redisDataDir === undefined || aofFile === undefined) {
+        throw new Error('Unable to determine Redis data directory or AOF filename');
+      }
+
       const aofPath = path.join(redisDataDir, aofFile);
 
       // Copy AOF file to backup destination
@@ -445,8 +474,10 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
 
         // Get type and value for each key in batch
         for (const key of batch) {
-          pipeline.type(key);
-          pipeline.ttl(key);
+          if (key !== undefined) {
+            pipeline.type(key);
+            pipeline.ttl(key);
+          }
         }
 
         const results = await pipeline.exec();
@@ -457,36 +488,38 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
           const typeResult = results![j * 2];
           const ttlResult = results![j * 2 + 1];
 
-          if (typeResult![1] && ttlResult![1] !== undefined) {
-            const type = typeResult![1] as string;
-            const ttl = ttlResult![1] as number;
+          if (typeResult && typeResult[1] && ttlResult && ttlResult[1] !== undefined) {
+            const type = typeResult[1] as string;
+            const ttl = ttlResult[1] as number;
 
             let value;
             switch (type) {
               case 'string':
-                value = await client.get(key);
+                if (key !== undefined) value = await client.get(key);
                 break;
               case 'hash':
-                value = await client.hgetall(key);
+                if (key !== undefined) value = await client.hgetall(key);
                 break;
               case 'list':
-                value = await client.lrange(key, 0, -1);
+                if (key !== undefined) value = await client.lrange(key, 0, -1);
                 break;
               case 'set':
-                value = await client.smembers(key);
+                if (key !== undefined) value = await client.smembers(key);
                 break;
               case 'zset':
-                value = await client.zrange(key, 0, -1, 'WITHSCORES');
+                if (key !== undefined) value = await client.zrange(key, 0, -1, 'WITHSCORES');
                 break;
               default:
                 continue; // Skip unknown types
             }
 
-            dumpData[key] = {
-              type,
-              value,
-              ttl: ttl > 0 ? ttl : null,
-            };
+            if (key !== undefined) {
+              dumpData[key] = {
+                type,
+                value,
+                ttl: ttl > 0 ? ttl : null,
+              };
+            }
           }
         }
 
@@ -515,11 +548,17 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
    * Create configuration backup
    */
   private async createConfigBackup(client: RedisType, destination: string): Promise<string> {
-    const config = await client.config('GET', '*');
+    const config = await client.config('GET', '*') as string[];
     const configObj: Record<string, string> = {};
 
-    for (let i = 0; i < config.length; i += 2) {
-      configObj[config[i]] = config[i + 1];
+    if (Array.isArray(config)) {
+      for (let i = 0; i < config.length; i += 2) {
+        const key = config[i];
+        const value = config[i + 1];
+        if (key !== undefined && value !== undefined) {
+          configObj[key] = value;
+        }
+      }
     }
 
     const configPath = path.join(destination, 'redis_config.json');
@@ -551,18 +590,26 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
       const pipeline = client.pipeline();
 
       for (const key of batch) {
-        pipeline.type(key);
-        pipeline.ttl(key);
-        pipeline.memory('usage', key);
+        if (key !== undefined) {
+          pipeline.type(key);
+          pipeline.ttl(key);
+          pipeline.memory('USAGE', key);
+        }
       }
 
       const results = await pipeline.exec();
 
       for (let j = 0; j < batch.length; j++) {
         const key = batch[j];
-        const type = results![j * 3][1] as string;
-        const ttl = results![j * 3 + 1][1] as number;
-        const size = results![j * 3 + 2][1] as number;
+        const typeResult = results?.[j * 3];
+        const ttlResult = results?.[j * 3 + 1];
+        const sizeResult = results?.[j * 3 + 2];
+
+        if (!typeResult || !ttlResult || !sizeResult || key === undefined) continue;
+
+        const type = typeResult[1] as string;
+        const ttl = ttlResult[1] as number;
+        const size = sizeResult[1] as number;
 
         keyInfo.push({
           key,
@@ -602,7 +649,7 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
         '--rdb', rdbFile,
       ];
 
-      if (config.password) {
+      if (config.password !== undefined) {
         args.push('-a', config.password);
       }
 
@@ -631,7 +678,9 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
       const pipeline = client.pipeline();
 
       for (const command of batch) {
-        pipeline.call(...command);
+        if (Array.isArray(command) && command.length > 0) {
+          pipeline.call(...(command as [string, ...any[]]));
+        }
       }
 
       await pipeline.exec();
@@ -663,17 +712,25 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
           pipeline.hset(key, value);
           break;
         case 'list':
-          pipeline.lpush(key, ...value);
+          if (Array.isArray(value) && value.length > 0) {
+            pipeline.lpush(key, ...value);
+          }
           break;
         case 'set':
-          pipeline.sadd(key, ...value);
+          if (Array.isArray(value) && value.length > 0) {
+            pipeline.sadd(key, ...value);
+          }
           break;
         case 'zset':
-          const zsetArgs = [];
-          for (let i = 0; i < value.length; i += 2) {
-            zsetArgs.push(value[i + 1], value[i]); // score, member
+          if (Array.isArray(value) && value.length > 0) {
+            const zsetArgs = [];
+            for (let i = 0; i < value.length; i += 2) {
+              zsetArgs.push(value[i + 1], value[i]); // score, member
+            }
+            if (zsetArgs.length > 0) {
+              pipeline.zadd(key, ...zsetArgs);
+            }
           }
-          pipeline.zadd(key, ...zsetArgs);
           break;
       }
 
@@ -686,7 +743,7 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
       // Execute in batches
       if (commandCount >= 1000) {
         await pipeline.exec();
-        pipeline.clear();
+        // Create new pipeline instead of clear
         commandCount = 0;
       }
     }
@@ -706,9 +763,9 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
     let i = 0;
 
     while (i < lines.length) {
-      const line = lines[i].trim();
+      const line = lines[i]?.trim();
 
-      if (line.startsWith('*')) {
+      if (line && line.startsWith('*')) {
         // Array length indicator
         const argCount = parseInt(line.substring(1), 10);
         const command: string[] = [];
@@ -716,10 +773,10 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
         i++; // Move to first argument
 
         for (let j = 0; j < argCount; j++) {
-          if (i < lines.length && lines[i].startsWith('$')) {
+          if (i < lines.length && lines[i]?.startsWith('$')) {
             i++; // Skip length indicator
-            if (i < lines.length) {
-              command.push(lines[i]);
+            if (i < lines.length && lines[i] !== undefined) {
+              command.push(lines[i]!);
               i++;
             }
           }

@@ -9,7 +9,8 @@
 
 import { Redis, type RedisOptions } from 'ioredis';
 import { createLogger, type Logger } from '../../../logger/index.js';
-import type { PoolFactory, PoolConfig, RedisPoolConfig, DATABASE_DEFAULTS } from '../types.js';
+import type { PoolFactory, PoolConfig, RedisPoolConfig } from '../types.js';
+import { DATABASE_DEFAULTS } from '../types.js';
 
 /**
  * Redis Pool Factory
@@ -85,7 +86,7 @@ export class RedisPoolFactory implements PoolFactory<Redis> {
 			this.logger.debug('Redis connection closed');
 		});
 
-		redis.on('reconnecting', (ms) => {
+		redis.on('reconnecting', (ms: number) => {
 			this.logger.debug(`Redis reconnecting in ${ms}ms`);
 		});
 
@@ -199,20 +200,17 @@ export class RedisPoolFactory implements PoolFactory<Redis> {
 			password: config.password,
 
 			// Timeouts
-			connectTimeout: config.connectTimeout || 10000,
+			connectTimeout: config.connectTimeout || config.acquireTimeoutMs || 10000,
 			commandTimeout: config.commandTimeout || 5000,
 			lazyConnect: config.lazyConnect !== false,
 
 			// Retry configuration
-			retryDelayOnFailover: config.retryDelayOnFailover || 100,
+			// retryDelayOnFailover removed as it's not supported in this version
 			enableOfflineQueue: config.enableOfflineQueue !== false,
 			maxRetriesPerRequest: config.maxRetriesPerRequest || 3,
 
 			// Keep-alive settings
 			keepAlive: config.keepAlive !== undefined ? config.keepAlive : 30000,
-
-			// Connection limits (not directly supported by ioredis, but used for pool management)
-			maxLoadingTimeout: config.acquireTimeoutMs || 10000,
 		};
 
 		// Handle connection URL if provided
@@ -248,8 +246,8 @@ export class RedisPoolFactory implements PoolFactory<Redis> {
 		}
 
 		// Apply additional options if provided
-		if (config.options) {
-			Object.assign(options, config.options);
+		if ((config as any).options) {
+			Object.assign(options, (config as any).options);
 		}
 
 		return options;

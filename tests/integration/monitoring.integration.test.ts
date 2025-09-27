@@ -1,15 +1,26 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import supertest from 'supertest';
-import { createAPIServer } from '@app/api/server';
-import { metricsCollector } from '@core/monitoring';
+import { ApiServer } from '../../src/app/api/server.js';
+import { MemAgent } from '../../src/core/brain/memAgent/index.js';
+import { metricsCollector } from '../../src/core/monitoring/index.js';
 
 describe('Monitoring Integration Tests', () => {
-  let app: any;
-  let request: supertest.SuperTest<supertest.Test>;
+  let apiServer: ApiServer;
+  let request: ReturnType<typeof supertest>;
 
   beforeAll(async () => {
-    app = createAPIServer();
-    request = supertest(app);
+    const memAgent = new MemAgent({
+      systemPrompt: 'Test system prompt',
+      llm: {
+        model: 'gpt-3.5-turbo',
+        provider: 'openai'
+      }
+    });
+    apiServer = new ApiServer(memAgent, {
+      port: 3001
+    });
+    const expressApp = apiServer.getApp();
+    request = supertest(expressApp);
 
     // Initialize metrics collector
     metricsCollector.startCollection(1000); // 1s for tests

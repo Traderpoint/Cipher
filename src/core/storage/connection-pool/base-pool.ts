@@ -351,7 +351,7 @@ export class BaseConnectionPool<T = any> extends EventEmitter implements Connect
 				unhealthyConnections.push(connection);
 				return false;
 			} finally {
-				connection.healthCheckPromise = undefined;
+				delete connection.healthCheckPromise;
 			}
 		});
 
@@ -509,6 +509,7 @@ export class BaseConnectionPool<T = any> extends EventEmitter implements Connect
 
 		while (this.idleConnections.length > 0) {
 			const connection = this.idleConnections[0];
+			if (!connection) break;
 
 			if (now - connection.metadata.createdAt > maxLifetime || !connection.metadata.isHealthy) {
 				this.idleConnections.shift();
@@ -699,6 +700,7 @@ export class BaseConnectionPool<T = any> extends EventEmitter implements Connect
 		let removed = 0;
 		while (this.idleConnections.length > minConnections) {
 			const connection = this.idleConnections[0];
+			if (!connection) break;
 
 			if (now - connection.metadata.lastUsedAt > idleTimeout) {
 				this.idleConnections.shift();

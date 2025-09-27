@@ -8,12 +8,17 @@
 
 // Core database factories
 export { PostgresPoolFactory, postgresFactory } from './postgres-factory.js';
+import { postgresFactory } from './postgres-factory.js';
 export { RedisPoolFactory, redisFactory } from './redis-factory.js';
+import { redisFactory } from './redis-factory.js';
 export { Neo4jPoolFactory, neo4jFactory } from './neo4j-factory.js';
+import { neo4jFactory } from './neo4j-factory.js';
 
 // Vector database factories
 export { MilvusPoolFactory, milvusFactory } from './milvus-factory.js';
+import { milvusFactory } from './milvus-factory.js';
 export { QdrantPoolFactory, qdrantFactory } from './qdrant-factory.js';
+import { qdrantFactory } from './qdrant-factory.js';
 
 // Additional vector database factories (to be implemented)
 // export { ChromaPoolFactory, chromaFactory } from './chroma-factory.js';

@@ -49,6 +49,8 @@ describe('RedisBackend Vector Storage', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		config = {
+			type: 'redis',
+			url: 'redis://localhost:6379',
 			host: 'localhost',
 			port: 6379,
 			password: 'testpass',
@@ -76,6 +78,10 @@ describe('RedisBackend Vector Storage', () => {
 
 		it('should use defaults for missing config values', () => {
 			const minimalConfig: RedisBackendConfig = {
+				type: 'redis',
+				url: 'redis://localhost:6379',
+				collectionName: 'vectors',
+				dimension: 1536,
 				host: 'localhost',
 			};
 			const minimalBackend = new RedisBackend(minimalConfig);
@@ -86,7 +92,9 @@ describe('RedisBackend Vector Storage', () => {
 
 		it('should create client with URL configuration', () => {
 			const urlConfig: RedisBackendConfig = {
+				type: 'redis',
 				url: 'redis://localhost:6379',
+				collectionName: 'vectors',
 				dimension: 128,
 			};
 			new RedisBackend(urlConfig);

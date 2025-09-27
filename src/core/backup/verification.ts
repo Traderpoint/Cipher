@@ -70,7 +70,7 @@ export class BackupVerificationEngine {
   private readonly config: VerificationConfig;
 
   constructor(config: Partial<VerificationConfig> = {}, logger?: Logger) {
-    this.logger = logger || new Logger('BackupVerification');
+    this.logger = logger || new Logger({ level: 'info' });
     this.config = {
       enableParallelChecks: true,
       maxParallelJobs: 3,
@@ -137,7 +137,8 @@ export class BackupVerificationEngine {
 
     } catch (error) {
       result.duration = Date.now() - startTime;
-      result.errors.push(error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      result.errors.push(errorMessage);
       this.logger.error(`${verificationType} verification error for backup ${metadata.id}:`, error);
       return result;
     }
@@ -329,7 +330,7 @@ export class BackupVerificationEngine {
       result.checksumMatch = result.actualChecksum === expectedChecksum;
 
     } catch (error) {
-      result.error = error.message;
+      result.error = error instanceof Error ? error.message : String(error);
     }
 
     return result;
@@ -377,7 +378,7 @@ export class BackupVerificationEngine {
           file,
           size: 0,
           exists: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
@@ -455,7 +456,8 @@ export class BackupVerificationEngine {
       }
 
     } catch (error) {
-      result.errors.push(`Integrity check error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      result.errors.push(`Integrity check error: ${errorMessage}`);
     }
   }
 
@@ -507,13 +509,15 @@ export class BackupVerificationEngine {
       }
 
     } catch (error) {
-      result.errors.push(`Restore test error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      result.errors.push(`Restore test error: ${errorMessage}`);
     } finally {
       // Cleanup test directory
       try {
         await fs.rm(testDir, { recursive: true, force: true });
       } catch (cleanupError) {
-        result.warnings.push(`Failed to cleanup test directory: ${cleanupError.message}`);
+        const cleanupMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+        result.warnings.push(`Failed to cleanup test directory: ${cleanupMessage}`);
       }
     }
   }
@@ -575,7 +579,7 @@ export class BackupVerificationEngine {
           script,
           success: false,
           output: '',
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
@@ -702,7 +706,7 @@ export async function comprehensiveVerifyBackup(
     return {
       passed: false,
       report: {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString(),
       },
     };

@@ -247,8 +247,8 @@ describe('FaissBackend', () => {
 			distances: [[0.9, 0.8]],
 			labels: [0, 1], // 1D array, not 2D - these correspond to the indices in payloads map
 		});
-		faissBackend['faissIndex'].search = mockSearchImpl;
-		faissBackend['faissIndex'].ntotal = vi.fn().mockReturnValue(2);
+		faissBackend['faissIndex']!.search = mockSearchImpl;
+		faissBackend['faissIndex']!.ntotal = vi.fn().mockReturnValue(2);
 
 		const queryVector = [0.1, 0.2, 0.3, 0.4];
 		const results = await faissBackend.search(queryVector, 2);
@@ -272,8 +272,8 @@ describe('FaissBackend', () => {
 			distances: [[0.5]],
 			labels: [0], // 1D array, not 2D - this corresponds to index 0 in payloads map
 		});
-		backend['faissIndex'].search = mockSearchImpl;
-		backend['faissIndex'].ntotal = vi.fn().mockReturnValue(1);
+		backend['faissIndex']!.search = mockSearchImpl;
+		backend['faissIndex']!.ntotal = vi.fn().mockReturnValue(1);
 
 		const queryVector = [0, 0, 0, 0];
 		const results = await backend.search(queryVector, 1);
@@ -294,8 +294,8 @@ describe('FaissBackend', () => {
 			distances: [[0.7]],
 			labels: [0], // 1D array, not 2D - this corresponds to index 0 in payloads map
 		});
-		backend['faissIndex'].search = mockSearchImpl;
-		backend['faissIndex'].ntotal = vi.fn().mockReturnValue(1);
+		backend['faissIndex']!.search = mockSearchImpl;
+		backend['faissIndex']!.ntotal = vi.fn().mockReturnValue(1);
 
 		const queryVector = [0, 0, 0, 0];
 		const results = await backend.search(queryVector, 1);
@@ -314,8 +314,8 @@ describe('FaissBackend', () => {
 			distances: [[0.9]],
 			labels: [0], // 1D array, not 2D
 		});
-		faissBackend['faissIndex'].search = mockSearchImpl;
-		faissBackend['faissIndex'].ntotal = vi.fn().mockReturnValue(1);
+		faissBackend['faissIndex']!.search = mockSearchImpl;
+		faissBackend['faissIndex']!.ntotal = vi.fn().mockReturnValue(1);
 
 		const queryVector = [1, 1, 1, 1];
 		const normalizedQuery = faissBackend['normalizeVector'](queryVector);

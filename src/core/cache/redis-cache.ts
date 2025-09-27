@@ -42,10 +42,9 @@ export class RedisCache {
 
   constructor() {
     this.redis = new Redis({
-      host: env.REDIS_HOST || 'localhost',
-      port: env.REDIS_PORT || 6379,
-      password: env.REDIS_PASSWORD,
-      retryDelayOnFailover: 100,
+      host: (env as any).REDIS_HOST || 'localhost',
+      port: (env as any).REDIS_PORT || 6379,
+      password: (env as any).REDIS_PASSWORD,
       maxRetriesPerRequest: 3,
       lazyConnect: true,
     });
@@ -303,7 +302,7 @@ export class RedisCache {
   }
 
   private reportStats(): void {
-    metricsCollector.recordCacheStats('redis', this.stats);
+    metricsCollector.recordCacheStats(this.stats);
     logger.debug('Cache stats', this.stats);
   }
 

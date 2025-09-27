@@ -90,7 +90,7 @@ export const globalErrorHandler = (err: Error, req: Request, res: Response, next
 	});
 
 	// Track error in monitoring
-	errorTracker.trackError(err, {
+	errorTracker.trackError(err, 'api', {
 		statusCode,
 		requestId: req.requestId,
 		endpoint: `${req.method} ${req.route?.path || req.url}`,

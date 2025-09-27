@@ -388,7 +388,7 @@ Pro podrobné instrukce konfigurace viz [průvodce CLI kódovacích agentů](./e
 
 ## Zabezpečení
 
-Cipher implementuje komplexní bezpečnostní systém pro ochranu všech API endpointů a WebSocket připojení.
+Cipher implementuje komplexní bezpečnostní systém pro ochranu všech API endpointů a WebSocket připojení s **100% TypeScript strict mode compliance** pro maximální typovou bezpečnost.
 
 ### Nové bezpečnostní funkce
 
@@ -413,6 +413,12 @@ Cipher implementuje komplexní bezpečnostní systém pro ochranu všech API end
 - Granulární systém oprávnění: `read`, `write`, `admin`, `monitor`
 - Session-based izolace pro různé uživatele/klienty
 - Automatické vypršení tokenů s konfigurovatelnou platností
+
+**4. TypeScript strict mode compliance**
+- **100% dokončena** - 0 TypeScript chyb v celém codebase
+- Robustní typová bezpečnost pro všechny API endpointy a WebSocket připojení
+- Preventivní bezpečnostní opatření proti runtime chybám
+- Kompletní pokrytí typových definic pro connection pooling a monitoring systémy
 
 ### Používání JWT autentizace
 

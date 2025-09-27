@@ -14,7 +14,7 @@ import { logger } from '../../logger/index.js';
  * Enhanced pool configuration with database-specific options
  */
 export interface EnhancedPoolConfig extends BasePoolConfig {
-  type: 'postgres' | 'redis' | 'neo4j' | 'mongodb';
+  type: 'postgres' | 'redis' | 'neo4j' | 'mongodb' | 'mock_postgres' | 'mock_redis' | 'mock_neo4j' | 'mock_mongodb';
   host?: string;
   port?: number;
   database?: string;
@@ -198,10 +198,20 @@ export class SimpleConnectionPoolManager extends EventEmitter {
 
     switch (config.type) {
       case 'postgres':
+      case 'mock_postgres':
         parts.push(`${config.host || 'localhost'}:${config.port || 5432}/${config.database || 'default'}`);
         break;
       case 'redis':
+      case 'mock_redis':
         parts.push(`${config.host || 'localhost'}:${config.port || 6379}/${config.database || 0}`);
+        break;
+      case 'neo4j':
+      case 'mock_neo4j':
+        parts.push(`${config.host || 'localhost'}:${config.port || 7687}/${config.database || 'neo4j'}`);
+        break;
+      case 'mongodb':
+      case 'mock_mongodb':
+        parts.push(`${config.host || 'localhost'}:${config.port || 27017}/${config.database || 'default'}`);
         break;
       default:
         parts.push(`${config.host || 'localhost'}:${config.port || 'default'}`);

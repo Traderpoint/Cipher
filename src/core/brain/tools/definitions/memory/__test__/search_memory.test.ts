@@ -745,7 +745,7 @@ Query 4: webpack vite build tools
 				expect(result.metadata.totalResults).toBe(4);
 
 				// Verify that we got diverse results from different aspects of the query
-				const resultTexts = result.results.map(r => r.text);
+				const resultTexts = result.results.map((r: any) => r.text);
 				expect(resultTexts).toContain(
 					'Modern web development uses React, Vue, or Angular for frontend'
 				);
@@ -817,7 +817,7 @@ Query 3: Java JavaScript differences
 				expect(result.results).toHaveLength(3);
 
 				// Verify disambiguation worked - should get results for different meanings
-				const resultTexts = result.results.map(r => r.text);
+				const resultTexts = result.results.map((r: any) => r.text);
 				expect(resultTexts).toContain(
 					'Java is an object-oriented programming language developed by Sun Microsystems'
 				);

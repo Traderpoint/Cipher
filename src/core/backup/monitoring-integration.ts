@@ -7,8 +7,8 @@
 
 import { EventEmitter } from 'events';
 import {
-  BackupManager,
-  BackupScheduler,
+  IBackupManager,
+  BackupSchedule,
   BackupJob,
   BackupMetadata,
   BackupStatistics,
@@ -102,8 +102,8 @@ export class BackupMonitoringIntegration extends EventEmitter {
   private readonly errorTracker?: ErrorTracker;
   private readonly alertManager?: AlertManager;
 
-  private backupManager?: BackupManager;
-  private backupScheduler?: BackupScheduler;
+  private backupManager?: IBackupManager;
+  private backupScheduler?: any;
   private metricsInterval?: NodeJS.Timeout;
   private isInitialized = false;
 
@@ -127,7 +127,21 @@ export class BackupMonitoringIntegration extends EventEmitter {
     backupSizes: [],
     restoreDuration: [],
     verificationDuration: [],
-    storageTypeMetrics: {},
+    storageTypeMetrics: {
+      redis: { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+      sqlite: { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+      postgres: { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+      qdrant: { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+      milvus: { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+      chroma: { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+      pinecone: { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+      pgvector: { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+      faiss: { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+      weaviate: { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+      'file-system': { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+      'monitoring-data': { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+      'neo4j': { backupsCount: 0, totalSize: 0, averageDuration: 0, failureRate: 0 },
+    },
   };
 
   constructor(
@@ -139,10 +153,19 @@ export class BackupMonitoringIntegration extends EventEmitter {
   ) {
     super();
 
-    this.logger = logger || new Logger('BackupMonitoring');
-    this.metricsCollector = metricsCollector;
-    this.errorTracker = errorTracker;
-    this.alertManager = alertManager;
+    this.logger = logger || new Logger({ level: 'info' });
+
+    if (metricsCollector !== undefined) {
+      this.metricsCollector = metricsCollector;
+    }
+
+    if (errorTracker !== undefined) {
+      this.errorTracker = errorTracker;
+    }
+
+    if (alertManager !== undefined) {
+      this.alertManager = alertManager;
+    }
 
     // Default configuration
     this.config = {
@@ -169,8 +192,8 @@ export class BackupMonitoringIntegration extends EventEmitter {
    * Initialize monitoring integration
    */
   async initialize(
-    backupManager: BackupManager,
-    backupScheduler: BackupScheduler
+    backupManager: IBackupManager,
+    backupScheduler: any
   ): Promise<void> {
     if (this.isInitialized) {
       return;
@@ -254,7 +277,7 @@ export class BackupMonitoringIntegration extends EventEmitter {
 
       return {
         healthy: false,
-        issues: [`Health check failed: ${error.message}`],
+        issues: [`Health check failed: ${error instanceof Error ? error.message : String(error)}`],
         metrics: this.metrics,
       };
     }
@@ -338,7 +361,7 @@ export class BackupMonitoringIntegration extends EventEmitter {
 
     } catch (error) {
       this.logger.error('Failed to create dashboard data:', error);
-      return { error: error.message };
+      return { error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -348,7 +371,7 @@ export class BackupMonitoringIntegration extends EventEmitter {
   async shutdown(): Promise<void> {
     if (this.metricsInterval) {
       clearInterval(this.metricsInterval);
-      this.metricsInterval = undefined;
+      delete (this as any).metricsInterval;
     }
 
     this.removeAllListeners();
@@ -361,11 +384,11 @@ export class BackupMonitoringIntegration extends EventEmitter {
    * Set up event listeners for backup manager and scheduler
    */
   private setupEventListeners(): void {
-    if (this.backupManager) {
-      this.backupManager.on('job:started', this.handleBackupStarted.bind(this));
-      this.backupManager.on('job:completed', this.handleBackupCompleted.bind(this));
-      this.backupManager.on('job:failed', this.handleBackupFailed.bind(this));
-      this.backupManager.on('job:cancelled', this.handleBackupCancelled.bind(this));
+    if (this.backupManager && 'on' in this.backupManager) {
+      (this.backupManager as any).on('job:started', this.handleBackupStarted.bind(this));
+      (this.backupManager as any).on('job:completed', this.handleBackupCompleted.bind(this));
+      (this.backupManager as any).on('job:failed', this.handleBackupFailed.bind(this));
+      (this.backupManager as any).on('job:cancelled', this.handleBackupCancelled.bind(this));
     }
 
     if (this.backupScheduler) {
@@ -408,13 +431,18 @@ export class BackupMonitoringIntegration extends EventEmitter {
 
       // Update storage type metrics
       for (const [storageType, stats] of Object.entries(statistics.storageTypeStats)) {
-        this.metrics.storageTypeMetrics[storageType as BackupStorageType] = {
+        const metricEntry: any = {
           backupsCount: stats.count,
           totalSize: stats.size,
           averageDuration: 0, // Would need to track this separately
           failureRate: 0, // Would need to track this separately
-          lastBackupTime: stats.lastBackup,
         };
+
+        if (stats.lastBackup) {
+          metricEntry.lastBackupTime = stats.lastBackup;
+        }
+
+        this.metrics.storageTypeMetrics[storageType as BackupStorageType] = metricEntry;
       }
 
       // Get current job status
@@ -452,18 +480,22 @@ export class BackupMonitoringIntegration extends EventEmitter {
       return;
     }
 
-    // Record gauges
-    this.metricsCollector.recordGauge('backup_active_jobs', this.metrics.activeBackupJobs);
-    this.metricsCollector.recordGauge('backup_total_size_bytes', this.metrics.totalBackupSize);
-    this.metricsCollector.recordGauge('backup_available_disk_space_gb', this.metrics.availableDiskSpace);
-    this.metricsCollector.recordGauge('backup_newest_age_ms', this.metrics.newestBackupAge);
+    // Record gauges (if method exists)
+    if ('recordGauge' in this.metricsCollector) {
+      (this.metricsCollector as any).recordGauge('backup_active_jobs', this.metrics.activeBackupJobs);
+      (this.metricsCollector as any).recordGauge('backup_total_size_bytes', this.metrics.totalBackupSize);
+      (this.metricsCollector as any).recordGauge('backup_available_disk_space_gb', this.metrics.availableDiskSpace);
+      (this.metricsCollector as any).recordGauge('backup_newest_age_ms', this.metrics.newestBackupAge);
+    }
 
     // Record storage type metrics
-    for (const [storageType, metrics] of Object.entries(this.metrics.storageTypeMetrics)) {
-      const labels = { storage_type: storageType };
-      this.metricsCollector.recordGauge('backup_storage_count', metrics.backupsCount, labels);
-      this.metricsCollector.recordGauge('backup_storage_size_bytes', metrics.totalSize, labels);
-      this.metricsCollector.recordGauge('backup_storage_failure_rate', metrics.failureRate, labels);
+    if ('recordGauge' in this.metricsCollector) {
+      for (const [storageType, metrics] of Object.entries(this.metrics.storageTypeMetrics)) {
+        const labels = { storage_type: storageType };
+        (this.metricsCollector as any).recordGauge('backup_storage_count', metrics.backupsCount, labels);
+        (this.metricsCollector as any).recordGauge('backup_storage_size_bytes', metrics.totalSize, labels);
+        (this.metricsCollector as any).recordGauge('backup_storage_failure_rate', metrics.failureRate, labels);
+      }
     }
   }
 
@@ -551,7 +583,9 @@ export class BackupMonitoringIntegration extends EventEmitter {
     }
 
     if (this.errorTracker && job.error) {
-      this.errorTracker.trackError(job.error, {
+      const error = job.error instanceof Error ? job.error : new Error(job.error.message || String(job.error));
+      error.name = 'BackupError';
+      this.errorTracker.trackError(error, 'system', {
         context: 'backup',
         storageType: job.storageType,
         jobId: job.id,
@@ -603,7 +637,8 @@ export class BackupMonitoringIntegration extends EventEmitter {
     }
 
     if (this.errorTracker && result.error) {
-      this.errorTracker.trackError(result.error, {
+      const error = result.error instanceof Error ? result.error : new Error(result.error.message || String(result.error));
+      this.errorTracker.trackError(error, 'system', {
         context: 'scheduled_backup',
         storageType: result.storageType,
         jobId: result.jobId,

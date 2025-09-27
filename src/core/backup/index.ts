@@ -14,9 +14,11 @@ export * from './config.js';
 
 // Main backup manager
 export { BackupManager } from './manager.js';
+import { BackupManager } from './manager.js';
 
 // Backup scheduler
 export { BackupScheduler } from './scheduler.js';
+import { BackupScheduler } from './scheduler.js';
 
 // Storage handlers
 export { BaseStorageBackupHandler } from './handlers/base-handler.js';
@@ -201,7 +203,7 @@ export async function checkBackupSystemHealth(
     return {
       healthy: false,
       details: {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString(),
       },
     };

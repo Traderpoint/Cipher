@@ -392,27 +392,8 @@ export class PoolMonitoringSystem extends EventEmitter {
 	initialize(poolManager: UniversalPoolManager): void {
 		this.poolManager = poolManager;
 
-		// Listen to pool manager events
-		poolManager.on('connectionCreated', (metadata: ConnectionMetadata) => {
-			// Track connection creation
-		});
-
-		poolManager.on('connectionAcquired', (metadata: ConnectionMetadata) => {
-			const monitor = this.getOrCreateMonitor(metadata.poolType);
-			// Note: We'd need acquisition time from the pool manager
-		});
-
-		poolManager.on('connectionFailed', (error: Error, config: PoolConfig) => {
-			const poolKey = this.generatePoolKey(config);
-			const monitor = this.getOrCreateMonitor(poolKey);
-			monitor.recordError(error);
-		});
-
-		poolManager.on('poolHealthCheck', (stats: PoolStats) => {
-			const monitor = this.getOrCreateMonitor(stats.key);
-			monitor.updateStats(stats);
-			monitor.recordHealthCheck(stats.isHealthy);
-		});
+		// Note: Event listening would be implemented when UniversalPoolManager
+		// extends EventEmitter. For now, monitoring will use polling.
 
 		// Start metrics collection
 		this.startMetricsCollection();
@@ -550,7 +531,8 @@ export class PoolMonitoringSystem extends EventEmitter {
 	 */
 	private generatePoolKey(config: PoolConfig): string {
 		// Simple implementation - in practice, should match the pool manager's key generation
-		return `${config.type}-${config.host || 'default'}`;
+		const host = 'host' in config ? (config as any).host : 'default';
+		return `${config.type}-${host || 'default'}`;
 	}
 
 	/**

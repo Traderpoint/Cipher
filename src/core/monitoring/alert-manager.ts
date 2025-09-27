@@ -303,34 +303,69 @@ export class AlertManager extends EventEmitter {
 	/**
 	 * Trigger an alert
 	 */
-	private triggerAlert(rule: AlertRule, value: number): void {
-		const alertId = `${rule.id}_${Date.now()}`;
-		const alert: Alert = {
-			id: alertId,
-			ruleId: rule.id,
-			ruleName: rule.name,
-			severity: rule.severity,
-			message: `${rule.description || rule.name}: ${value.toFixed(2)} exceeds threshold ${rule.threshold}`,
-			value,
-			threshold: rule.threshold,
-			timestamp: new Date(),
-			resolved: false
-		};
+	triggerAlert(rule: AlertRule, value: number): void;
+	triggerAlert(alertData: { id: string; severity: string; title: string; message: string; data?: any }): void;
+	triggerAlert(ruleOrAlertData: AlertRule | { id: string; severity: string; title: string; message: string; data?: any }, value?: number): void {
+		// Check if it's the new alert data format
+		if ('title' in ruleOrAlertData && 'severity' in ruleOrAlertData) {
+			const alertData = ruleOrAlertData;
+			const alertId = `${alertData.id}_${Date.now()}`;
+			const alert: Alert = {
+				id: alertId,
+				ruleId: alertData.id,
+				ruleName: alertData.title,
+				severity: alertData.severity as 'info' | 'warning' | 'critical' | 'emergency',
+				message: alertData.message,
+				value: alertData.data?.value || 0,
+				threshold: alertData.data?.threshold || 0,
+				timestamp: new Date(),
+				resolved: false
+			};
 
-		this.activeAlerts.set(alertId, alert);
-		rule.lastTriggered = Date.now();
+			this.activeAlerts.set(alertId, alert);
 
-		// Emit alert event
-		this.emit('alertTriggered', alert);
+			// Emit alert event
+			this.emit('alertTriggered', alert);
 
-		logger.warn('Alert triggered', {
-			alertId,
-			ruleId: rule.id,
-			ruleName: rule.name,
-			severity: rule.severity,
-			value,
-			threshold: rule.threshold
-		});
+			logger.warn('Alert triggered', {
+				alertId,
+				ruleId: alertData.id,
+				ruleName: alertData.title,
+				severity: alertData.severity,
+				message: alertData.message
+			});
+		} else {
+			// Original rule-based alert format
+			const rule = ruleOrAlertData as AlertRule;
+			const alertValue = value!;
+			const alertId = `${rule.id}_${Date.now()}`;
+			const alert: Alert = {
+				id: alertId,
+				ruleId: rule.id,
+				ruleName: rule.name,
+				severity: rule.severity,
+				message: `${rule.description || rule.name}: ${alertValue.toFixed(2)} exceeds threshold ${rule.threshold}`,
+				value: alertValue,
+				threshold: rule.threshold,
+				timestamp: new Date(),
+				resolved: false
+			};
+
+			this.activeAlerts.set(alertId, alert);
+			rule.lastTriggered = Date.now();
+
+			// Emit alert event
+			this.emit('alertTriggered', alert);
+
+			logger.warn('Alert triggered', {
+				alertId,
+				ruleId: rule.id,
+				ruleName: rule.name,
+				severity: rule.severity,
+				value: alertValue,
+				threshold: rule.threshold
+			});
+		}
 	}
 
 	/**
