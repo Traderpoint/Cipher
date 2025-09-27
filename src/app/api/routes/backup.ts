@@ -41,13 +41,14 @@ export function initializeBackupAPI(manager: BackupManager, scheduler: BackupSch
  * GET /api/backup/status
  * Get backup system status and configuration
  */
-router.get('/status', async (req: Request, res: Response) => {
+router.get('/status', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupManager) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup manager not initialized',
         code: 'BACKUP_NOT_INITIALIZED'
       });
+      return;
     }
 
     const [config, statistics] = await Promise.all([
@@ -112,13 +113,14 @@ const validateStartBackup = [
   handleValidationErrors,
 ];
 
-router.post('/start', validateStartBackup, async (req: Request, res: Response) => {
+router.post('/start', validateStartBackup, async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupManager) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup manager not initialized',
         code: 'BACKUP_NOT_INITIALIZED'
       });
+      return;
     }
 
     const { storageType, options } = req.body;
@@ -149,13 +151,14 @@ router.post('/start', validateStartBackup, async (req: Request, res: Response) =
  * POST /api/backup/start-full
  * Start a full system backup
  */
-router.post('/start-full', async (req: Request, res: Response) => {
+router.post('/start-full', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupManager) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup manager not initialized',
         code: 'BACKUP_NOT_INITIALIZED'
       });
+      return;
     }
 
     const jobIds = await backupManager.startFullBackup();
@@ -184,13 +187,14 @@ router.post('/start-full', async (req: Request, res: Response) => {
  * GET /api/backup/jobs
  * List backup jobs with optional filtering
  */
-router.get('/jobs', async (req: Request, res: Response) => {
+router.get('/jobs', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupManager) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup manager not initialized',
         code: 'BACKUP_NOT_INITIALIZED'
       });
+      return;
     }
 
     const filters: Partial<BackupSearchFilters> = {};
@@ -252,13 +256,14 @@ router.get('/jobs', async (req: Request, res: Response) => {
  * GET /api/backup/jobs/:jobId
  * Get specific backup job status
  */
-router.get('/jobs/:jobId', async (req: Request, res: Response) => {
+router.get('/jobs/:jobId', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupManager) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup manager not initialized',
         code: 'BACKUP_NOT_INITIALIZED'
       });
+      return;
     }
 
     const { jobId } = req.params;
@@ -308,13 +313,14 @@ router.get('/jobs/:jobId', async (req: Request, res: Response) => {
  * DELETE /api/backup/jobs/:jobId
  * Cancel a running backup job
  */
-router.delete('/jobs/:jobId', async (req: Request, res: Response) => {
+router.delete('/jobs/:jobId', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupManager) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup manager not initialized',
         code: 'BACKUP_NOT_INITIALIZED'
       });
+      return;
     }
 
     const { jobId } = req.params;
@@ -385,13 +391,14 @@ const validateSearchBackups = [
   handleValidationErrors,
 ];
 
-router.post('/search', validateSearchBackups, async (req: Request, res: Response) => {
+router.post('/search', validateSearchBackups, async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupManager) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup manager not initialized',
         code: 'BACKUP_NOT_INITIALIZED'
       });
+      return;
     }
 
     const filters: BackupSearchFilters = req.body;
@@ -462,13 +469,14 @@ const validateRestoreBackup = [
   handleValidationErrors,
 ];
 
-router.post('/restore', validateRestoreBackup, async (req: Request, res: Response) => {
+router.post('/restore', validateRestoreBackup, async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupManager) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup manager not initialized',
         code: 'BACKUP_NOT_INITIALIZED'
       });
+      return;
     }
 
     const options: RestoreOptions = req.body;
@@ -497,13 +505,14 @@ router.post('/restore', validateRestoreBackup, async (req: Request, res: Respons
  * DELETE /api/backup/:backupId
  * Delete a backup
  */
-router.delete('/:backupId', async (req: Request, res: Response) => {
+router.delete('/:backupId', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupManager) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup manager not initialized',
         code: 'BACKUP_NOT_INITIALIZED'
       });
+      return;
     }
 
     const { backupId } = req.params;
@@ -538,13 +547,14 @@ router.delete('/:backupId', async (req: Request, res: Response) => {
  * POST /api/backup/verify/:backupId
  * Verify backup integrity
  */
-router.post('/verify/:backupId', async (req: Request, res: Response) => {
+router.post('/verify/:backupId', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupManager) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup manager not initialized',
         code: 'BACKUP_NOT_INITIALIZED'
       });
+      return;
     }
 
     const { backupId } = req.params;
@@ -582,13 +592,14 @@ router.post('/verify/:backupId', async (req: Request, res: Response) => {
  * POST /api/backup/cleanup
  * Cleanup old backups
  */
-router.post('/cleanup', async (req: Request, res: Response) => {
+router.post('/cleanup', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupManager) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup manager not initialized',
         code: 'BACKUP_NOT_INITIALIZED'
       });
+      return;
     }
 
     const deletedCount = await backupManager.cleanupOldBackups();
@@ -615,13 +626,14 @@ router.post('/cleanup', async (req: Request, res: Response) => {
  * GET /api/backup/statistics
  * Get backup statistics
  */
-router.get('/statistics', async (req: Request, res: Response) => {
+router.get('/statistics', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupManager) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup manager not initialized',
         code: 'BACKUP_NOT_INITIALIZED'
       });
+      return;
     }
 
     const statistics = await backupManager.getStatistics();
@@ -647,13 +659,14 @@ router.get('/statistics', async (req: Request, res: Response) => {
  * GET /api/backup/schedules
  * Get all scheduled backup jobs
  */
-router.get('/schedules', async (req: Request, res: Response) => {
+router.get('/schedules', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupScheduler) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup scheduler not initialized',
         code: 'SCHEDULER_NOT_INITIALIZED'
       });
+      return;
     }
 
     const schedules = backupScheduler.getScheduledJobs();
@@ -708,13 +721,14 @@ const validateAddSchedule = [
   handleValidationErrors,
 ];
 
-router.post('/schedules', validateAddSchedule, async (req: Request, res: Response) => {
+router.post('/schedules', validateAddSchedule, async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupScheduler) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup scheduler not initialized',
         code: 'SCHEDULER_NOT_INITIALIZED'
       });
+      return;
     }
 
     const { name, storageType, schedule, storageConfig } = req.body;
@@ -768,13 +782,14 @@ const validateUpdateSchedule = [
   handleValidationErrors,
 ];
 
-router.put('/schedules/:jobId', validateUpdateSchedule, async (req: Request, res: Response) => {
+router.put('/schedules/:jobId', validateUpdateSchedule, async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupScheduler) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup scheduler not initialized',
         code: 'SCHEDULER_NOT_INITIALIZED'
       });
+      return;
     }
 
     const { jobId } = req.params;
@@ -818,13 +833,14 @@ router.put('/schedules/:jobId', validateUpdateSchedule, async (req: Request, res
  * DELETE /api/backup/schedules/:jobId
  * Remove backup schedule
  */
-router.delete('/schedules/:jobId', async (req: Request, res: Response) => {
+router.delete('/schedules/:jobId', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupScheduler) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup scheduler not initialized',
         code: 'SCHEDULER_NOT_INITIALIZED'
       });
+      return;
     }
 
     const { jobId } = req.params;
@@ -866,13 +882,14 @@ router.delete('/schedules/:jobId', async (req: Request, res: Response) => {
  * POST /api/backup/schedules/:jobId/toggle
  * Enable/disable backup schedule
  */
-router.post('/schedules/:jobId/toggle', async (req: Request, res: Response) => {
+router.post('/schedules/:jobId/toggle', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupScheduler) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup scheduler not initialized',
         code: 'SCHEDULER_NOT_INITIALIZED'
       });
+      return;
     }
 
     const { jobId } = req.params;
@@ -923,13 +940,14 @@ router.post('/schedules/:jobId/toggle', async (req: Request, res: Response) => {
  * POST /api/backup/schedules/:jobId/run
  * Run scheduled job immediately
  */
-router.post('/schedules/:jobId/run', async (req: Request, res: Response) => {
+router.post('/schedules/:jobId/run', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!backupScheduler) {
-      return res.status(503).json({
+      res.status(503).json({
         error: 'Backup scheduler not initialized',
         code: 'SCHEDULER_NOT_INITIALIZED'
       });
+      return;
     }
 
     const { jobId } = req.params;

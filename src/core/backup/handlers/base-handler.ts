@@ -104,8 +104,8 @@ export abstract class BaseStorageBackupHandler implements IStorageBackupHandler 
         status: 'completed',
         startTime,
         endTime: new Date(),
-        size: compressedSize ? undefined : totalSize,
-        compressedSize,
+        ...(compressedSize ? {} : { size: totalSize }),
+        ...(compressedSize ? { compressedSize } : {}),
         compression: config.compression,
         files,
         destination: {
@@ -154,10 +154,11 @@ export abstract class BaseStorageBackupHandler implements IStorageBackupHandler 
       const filesToRestore = options.files || metadata.files;
 
       // Decompress files if needed
+      const targetPath = options.targetPath || path.dirname(metadata.files[0]!);
       const decompressedFiles = await this.decompressFiles(
         filesToRestore,
         metadata.compression,
-        options.targetPath || path.dirname(metadata.files[0])
+        targetPath
       );
 
       // Execute storage-specific restore

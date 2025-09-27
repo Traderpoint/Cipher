@@ -554,7 +554,7 @@ export class PostgreSQLBackupHandler extends BaseStorageBackupHandler {
   /**
    * Override integrity verification for PostgreSQL
    */
-  protected async verifyIntegrity(metadata: BackupMetadata): Promise<boolean> {
+  protected override async verifyIntegrity(metadata: BackupMetadata): Promise<boolean> {
     // First run base verification
     const baseVerification = await super.verifyIntegrity(metadata);
     if (!baseVerification) {

@@ -7,8 +7,8 @@
 
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import IORedis from 'ioredis';
-type RedisType = InstanceType<typeof IORedis>;
+import { Redis } from 'ioredis';
+type RedisType = Redis;
 import {
   StorageBackupConfig,
   BackupMetadata,
@@ -312,9 +312,9 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
     }
 
     if (config.url) {
-      this.client = new IORedis(config.url);
+      this.client = new Redis(config.url);
     } else {
-      this.client = new IORedis({
+      this.client = new Redis({
         host: config.host,
         port: config.port,
         password: config.password,

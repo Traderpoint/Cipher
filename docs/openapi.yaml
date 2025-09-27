@@ -1,0 +1,1657 @@
+openapi: 3.0.3
+info:
+  title: Cipher Project API
+  version: 0.3.0
+  description: |
+    Comprehensive REST API for the Cipher Project - a WebSocket-based conversation system with monitoring, backup, and memory management capabilities.
+
+    ## Features
+    - JWT-based WebSocket authentication
+    - Advanced monitoring and alerting
+    - Automated backup system
+    - Memory and session management
+    - Real-time metrics and dashboard
+    - Performance optimization tools
+
+    ## Authentication
+    Most WebSocket operations require JWT tokens obtained from the `/api/auth/websocket/token` endpoint.
+    REST API endpoints are publicly accessible for monitoring and management.
+
+  contact:
+    name: Cipher Project
+    url: https://github.com/cipher-project
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3001
+    description: Development server
+  - url: https://api.cipher.local
+    description: Production server
+
+paths:
+  # Health and System Endpoints
+  /health:
+    get:
+      tags: [Health]
+      summary: System health check
+      description: Get comprehensive system health status with uptime and service information
+      responses:
+        '200':
+          description: System health information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          description: System health check failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Authentication Endpoints
+  /api/auth/websocket/token:
+    post:
+      tags: [Authentication]
+      summary: Generate WebSocket JWT token
+      description: |
+        Generate a JWT token for WebSocket authentication. Tokens can include session binding,
+        user identification, permissions, and custom expiration times.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+            examples:
+              basic:
+                summary: Basic token request
+                value:
+                  sessionId: "my-session"
+                  permissions: ["read", "write"]
+              full:
+                summary: Complete token request
+                value:
+                  sessionId: "prod-session-001"
+                  userId: "user-12345"
+                  permissions: ["read", "write", "monitor"]
+                  expiresIn: "24h"
+      responses:
+        '200':
+          description: JWT token generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '500':
+          description: Token generation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/websocket/verify:
+    post:
+      tags: [Authentication]
+      summary: Verify JWT token
+      description: Validate a JWT token and return its claims and validity status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: JWT token to verify
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: Token verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenVerificationResponse'
+        '400':
+          description: Invalid token format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/websocket/info:
+    get:
+      tags: [Authentication]
+      summary: Get WebSocket authentication info
+      description: Get information about WebSocket authentication methods and connection options
+      responses:
+        '200':
+          description: WebSocket authentication information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebSocketAuthInfo'
+
+  # Monitoring Endpoints
+  /api/monitoring/health:
+    get:
+      tags: [Monitoring]
+      summary: Detailed system health status
+      description: Get comprehensive health status including all services and their metrics
+      responses:
+        '200':
+          description: System health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonitoringHealthResponse'
+        '500':
+          description: Health check failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/monitoring/metrics:
+    get:
+      tags: [Monitoring]
+      summary: Get all system metrics
+      description: Retrieve comprehensive system metrics including performance, usage, and operational data
+      responses:
+        '200':
+          description: Complete system metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemMetrics'
+        '500':
+          description: Failed to retrieve metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/monitoring/metrics/prometheus:
+    get:
+      tags: [Monitoring]
+      summary: Export Prometheus metrics
+      description: Get metrics in Prometheus text format for monitoring integration
+      responses:
+        '200':
+          description: Prometheus format metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: |
+                  # HELP cipher_api_requests_total Total API requests
+                  # TYPE cipher_api_requests_total counter
+                  cipher_api_requests_total{method="GET",endpoint="/health"} 1234
+        '500':
+          description: Failed to export metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/monitoring/metrics/system:
+    get:
+      tags: [Monitoring]
+      summary: Get system performance metrics
+      description: Get detailed system performance metrics including CPU, memory, and disk usage
+      responses:
+        '200':
+          description: System performance metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemPerformanceMetrics'
+
+  /api/monitoring/metrics/llm:
+    get:
+      tags: [Monitoring]
+      summary: Get LLM performance metrics
+      description: Get detailed LLM performance metrics including response times and usage statistics
+      responses:
+        '200':
+          description: LLM performance metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMMetrics'
+
+  /api/monitoring/metrics/memory:
+    get:
+      tags: [Monitoring]
+      summary: Get memory system metrics
+      description: Get memory system metrics including knowledge base size and session data
+      responses:
+        '200':
+          description: Memory system metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryMetrics'
+
+  /api/monitoring/metrics/websocket:
+    get:
+      tags: [Monitoring]
+      summary: Get WebSocket metrics
+      description: Get WebSocket connection and message metrics
+      responses:
+        '200':
+          description: WebSocket metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebSocketMetrics'
+
+  /api/monitoring/dashboard:
+    get:
+      tags: [Monitoring]
+      summary: Get monitoring dashboard data
+      description: Get real-time dashboard data for system monitoring UI
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardData'
+
+  /api/monitoring/alerts:
+    get:
+      tags: [Monitoring]
+      summary: Get active alerts
+      description: Retrieve all active system alerts and their details
+      responses:
+        '200':
+          description: Active alerts list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Alert'
+
+  /api/monitoring/alerts/rules:
+    post:
+      tags: [Monitoring]
+      summary: Create alert rule
+      description: Create a new monitoring alert rule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertRule'
+      responses:
+        '201':
+          description: Alert rule created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertRuleResponse'
+        '400':
+          description: Invalid alert rule
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /api/monitoring/alerts/rules/{ruleId}:
+    delete:
+      tags: [Monitoring]
+      summary: Delete alert rule
+      description: Remove an existing alert rule
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Alert rule ID
+      responses:
+        '200':
+          description: Alert rule deleted successfully
+        '404':
+          description: Alert rule not found
+
+  /api/monitoring/alerts/rules/{ruleId}/toggle:
+    put:
+      tags: [Monitoring]
+      summary: Toggle alert rule
+      description: Enable or disable an alert rule
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Alert rule ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+                  description: Whether to enable or disable the rule
+      responses:
+        '200':
+          description: Alert rule toggled successfully
+        '404':
+          description: Alert rule not found
+
+  # Backup System Endpoints
+  /api/backup/status:
+    get:
+      tags: [Backup]
+      summary: Get backup system status
+      description: Get current backup system status and configuration
+      responses:
+        '200':
+          description: Backup system status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupStatus'
+        '503':
+          description: Backup system not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailableError'
+
+  /api/backup/start:
+    post:
+      tags: [Backup]
+      summary: Start backup job
+      description: Start a new backup job with specified configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackupRequest'
+      responses:
+        '200':
+          description: Backup job started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupJobResponse'
+        '400':
+          description: Invalid backup configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '503':
+          description: Backup system not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailableError'
+
+  /api/backup/start-full:
+    post:
+      tags: [Backup]
+      summary: Start full system backup
+      description: Start a complete system backup with all components
+      responses:
+        '200':
+          description: Full backup started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupJobResponse'
+        '503':
+          description: Backup system not initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailableError'
+
+  /api/backup/jobs:
+    get:
+      tags: [Backup]
+      summary: List backup jobs
+      description: Get list of backup jobs with optional filtering
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, completed, failed, cancelled]
+          description: Filter by job status
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [full, incremental, differential]
+          description: Filter by backup type
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Maximum number of jobs to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of jobs to skip
+      responses:
+        '200':
+          description: List of backup jobs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupJobsList'
+
+  /api/backup/jobs/{jobId}:
+    get:
+      tags: [Backup]
+      summary: Get backup job status
+      description: Get detailed status of a specific backup job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Backup job ID
+      responses:
+        '200':
+          description: Backup job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupJob'
+        '404':
+          description: Backup job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+    delete:
+      tags: [Backup]
+      summary: Cancel backup job
+      description: Cancel a running backup job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Backup job ID
+      responses:
+        '200':
+          description: Backup job cancelled successfully
+        '404':
+          description: Backup job not found
+        '409':
+          description: Backup job cannot be cancelled (already completed/failed)
+
+  /api/backup/search:
+    post:
+      tags: [Backup]
+      summary: Search backups
+      description: Search for backups using various filters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackupSearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupSearchResults'
+
+  /api/backup/restore:
+    post:
+      tags: [Backup]
+      summary: Restore from backup
+      description: Restore system state from a backup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestoreRequest'
+      responses:
+        '200':
+          description: Restore operation started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreResponse'
+        '400':
+          description: Invalid restore parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /api/backup/{backupId}:
+    delete:
+      tags: [Backup]
+      summary: Delete backup
+      description: Delete a specific backup
+      parameters:
+        - name: backupId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Backup ID
+      responses:
+        '200':
+          description: Backup deleted successfully
+        '404':
+          description: Backup not found
+        '409':
+          description: Backup cannot be deleted (in use)
+
+  /api/backup/verify/{backupId}:
+    post:
+      tags: [Backup]
+      summary: Verify backup integrity
+      description: Verify the integrity of a backup
+      parameters:
+        - name: backupId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Backup ID
+      responses:
+        '200':
+          description: Backup verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupVerificationResult'
+
+  /api/backup/schedules:
+    get:
+      tags: [Backup]
+      summary: Get backup schedules
+      description: Get all configured backup schedules
+      responses:
+        '200':
+          description: List of backup schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BackupSchedule'
+
+    post:
+      tags: [Backup]
+      summary: Create backup schedule
+      description: Create a new backup schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBackupScheduleRequest'
+      responses:
+        '201':
+          description: Backup schedule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupSchedule'
+
+  /api/backup/schedules/{jobId}:
+    put:
+      tags: [Backup]
+      summary: Update backup schedule
+      description: Update an existing backup schedule
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Schedule job ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBackupScheduleRequest'
+      responses:
+        '200':
+          description: Backup schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupSchedule'
+
+    delete:
+      tags: [Backup]
+      summary: Delete backup schedule
+      description: Remove a backup schedule
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Schedule job ID
+      responses:
+        '200':
+          description: Backup schedule deleted successfully
+        '404':
+          description: Backup schedule not found
+
+  /api/backup/schedules/{jobId}/toggle:
+    post:
+      tags: [Backup]
+      summary: Toggle backup schedule
+      description: Enable or disable a backup schedule
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Schedule job ID
+      responses:
+        '200':
+          description: Backup schedule toggled successfully
+        '404':
+          description: Backup schedule not found
+
+  /api/backup/schedules/{jobId}/run:
+    post:
+      tags: [Backup]
+      summary: Run scheduled backup immediately
+      description: Execute a scheduled backup job immediately
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Schedule job ID
+      responses:
+        '200':
+          description: Scheduled backup started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupJobResponse'
+
+components:
+  schemas:
+    # Health and System Schemas
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, critical]
+          description: Overall system health status
+        uptime:
+          type: number
+          description: System uptime in seconds
+        websocket:
+          type: object
+          properties:
+            connections:
+              type: integer
+              description: Total WebSocket connections
+            active:
+              type: integer
+              description: Active WebSocket connections
+        timestamp:
+          type: string
+          format: date-time
+          description: Health check timestamp
+
+    MonitoringHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, critical]
+        issues:
+          type: array
+          items:
+            type: string
+          description: List of current issues
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+          description: System uptime in seconds
+        version:
+          type: string
+          description: Application version
+        environment:
+          type: string
+          description: Runtime environment
+        services:
+          type: object
+          properties:
+            api:
+              type: object
+              properties:
+                status:
+                  type: string
+                port:
+                  type: integer
+            websocket:
+              type: object
+              properties:
+                status:
+                  type: string
+                activeConnections:
+                  type: integer
+            memory:
+              type: object
+              properties:
+                status:
+                  type: string
+                knowledgeCount:
+                  type: integer
+            llm:
+              type: string
+              description: LLM configuration status
+
+    # Authentication Schemas
+    TokenRequest:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Optional session ID to bind token to
+          example: "user-session-123"
+        userId:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Optional user ID for identification
+          example: "user-456"
+        permissions:
+          type: array
+          items:
+            type: string
+            enum: [read, write, admin, monitor]
+          description: Array of permissions to grant
+          example: ["read", "write"]
+        expiresIn:
+          type: string
+          pattern: '^(\d+[smhd])|(\d+)$'
+          description: Token expiration time (e.g., 1h, 30m, 7d)
+          example: "24h"
+
+    TokenResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+              description: JWT token
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            expiresAt:
+              type: string
+              format: date-time
+              description: Token expiration timestamp
+            permissions:
+              type: array
+              items:
+                type: string
+              description: Granted permissions
+            sessionId:
+              type: string
+              description: Bound session ID (if provided)
+            userId:
+              type: string
+              description: User ID (if provided)
+            usage:
+              type: object
+              properties:
+                websocketUrl:
+                  type: string
+                  description: WebSocket URL with token
+                  example: "ws://localhost:3001?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                authHeader:
+                  type: string
+                  description: Authorization header format
+                  example: "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                subprotocol:
+                  type: string
+                  description: WebSocket subprotocol with token
+                  example: "cipher-jwt-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    TokenVerificationResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success, error]
+        data:
+          type: object
+          properties:
+            valid:
+              type: boolean
+              description: Whether token is valid
+            expired:
+              type: boolean
+              description: Whether token is expired
+            claims:
+              type: object
+              description: Token claims (if valid)
+            expiresAt:
+              type: string
+              format: date-time
+              description: Token expiration time
+
+    WebSocketAuthInfo:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: object
+          properties:
+            authMethods:
+              type: array
+              items:
+                type: string
+              description: Available authentication methods
+              example: ["query", "header", "subprotocol"]
+            supportedPermissions:
+              type: array
+              items:
+                type: string
+              description: Available permission levels
+              example: ["read", "write", "admin", "monitor"]
+            defaultExpiration:
+              type: string
+              description: Default token expiration
+              example: "1h"
+            endpoints:
+              type: object
+              properties:
+                token:
+                  type: string
+                  description: Token generation endpoint
+                verify:
+                  type: string
+                  description: Token verification endpoint
+            examples:
+              type: object
+              description: Usage examples for different auth methods
+
+    # Monitoring Schemas
+    SystemMetrics:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        system:
+          $ref: '#/components/schemas/SystemPerformanceMetrics'
+        websocket:
+          $ref: '#/components/schemas/WebSocketMetrics'
+        memory:
+          $ref: '#/components/schemas/MemoryMetrics'
+        llm:
+          $ref: '#/components/schemas/LLMMetrics'
+        api:
+          type: object
+          properties:
+            totalRequests:
+              type: integer
+            requestsPerSecond:
+              type: number
+            averageResponseTime:
+              type: number
+            errorRate:
+              type: number
+
+    SystemPerformanceMetrics:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        system:
+          type: object
+          properties:
+            uptime:
+              type: number
+              description: System uptime in seconds
+            cpu:
+              type: object
+              properties:
+                usage:
+                  type: number
+                  description: CPU usage percentage
+                loadAverage:
+                  type: array
+                  items:
+                    type: number
+                  description: System load average [1m, 5m, 15m]
+            memory:
+              type: object
+              properties:
+                total:
+                  type: integer
+                  description: Total memory in bytes
+                used:
+                  type: integer
+                  description: Used memory in bytes
+                free:
+                  type: integer
+                  description: Free memory in bytes
+                usage:
+                  type: number
+                  description: Memory usage percentage
+            disk:
+              type: object
+              properties:
+                total:
+                  type: integer
+                  description: Total disk space in bytes
+                used:
+                  type: integer
+                  description: Used disk space in bytes
+                free:
+                  type: integer
+                  description: Free disk space in bytes
+
+    LLMMetrics:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        llm:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              totalRequests:
+                type: integer
+              totalTokens:
+                type: integer
+              averageResponseTime:
+                type: number
+              errorRate:
+                type: number
+              lastRequest:
+                type: string
+                format: date-time
+
+    MemoryMetrics:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        memory:
+          type: object
+          properties:
+            totalKnowledge:
+              type: integer
+              description: Total knowledge entries
+            activeSessions:
+              type: integer
+              description: Active sessions count
+            totalSessions:
+              type: integer
+              description: Total sessions count
+            memoryUsage:
+              type: number
+              description: Memory usage in MB
+            avgKnowledgePerSession:
+              type: number
+              description: Average knowledge per session
+
+    WebSocketMetrics:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        websocket:
+          type: object
+          properties:
+            activeConnections:
+              type: integer
+              description: Current active connections
+            totalConnections:
+              type: integer
+              description: Total connections since start
+            messagesReceived:
+              type: integer
+              description: Total messages received
+            messagesSent:
+              type: integer
+              description: Total messages sent
+            connectionRate:
+              type: number
+              description: Connections per minute
+            messageRate:
+              type: number
+              description: Messages per minute
+
+    DashboardData:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        overview:
+          type: object
+          properties:
+            systemHealth:
+              type: string
+              enum: [healthy, warning, critical]
+            activeConnections:
+              type: integer
+            totalSessions:
+              type: integer
+            memoryUsage:
+              type: number
+        metrics:
+          $ref: '#/components/schemas/SystemMetrics'
+        alerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alert'
+        performance:
+          type: object
+          properties:
+            responseTime:
+              type: number
+            throughput:
+              type: number
+            errorRate:
+              type: number
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Alert ID
+        type:
+          type: string
+          enum: [warning, error, critical]
+        message:
+          type: string
+          description: Alert message
+        timestamp:
+          type: string
+          format: date-time
+        resolved:
+          type: boolean
+          description: Whether alert is resolved
+        source:
+          type: string
+          description: Alert source component
+        metadata:
+          type: object
+          description: Additional alert metadata
+
+    AlertRule:
+      type: object
+      required: [name, condition, severity]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Alert rule name
+        description:
+          type: string
+          maxLength: 500
+          description: Alert rule description
+        condition:
+          type: object
+          description: Alert condition configuration
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+          description: Alert severity level
+        enabled:
+          type: boolean
+          default: true
+          description: Whether rule is enabled
+        cooldown:
+          type: integer
+          minimum: 60
+          description: Cooldown period in seconds
+
+    AlertRuleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Generated rule ID
+        name:
+          type: string
+        condition:
+          type: object
+        severity:
+          type: string
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    # Backup System Schemas
+    BackupStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [idle, running, error]
+        activeJobs:
+          type: integer
+          description: Number of active backup jobs
+        totalJobs:
+          type: integer
+          description: Total backup jobs
+        lastBackup:
+          type: string
+          format: date-time
+          description: Last successful backup timestamp
+        storage:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [local, s3, gcs, azure]
+            available:
+              type: boolean
+            capacity:
+              type: object
+              properties:
+                total:
+                  type: integer
+                used:
+                  type: integer
+                free:
+                  type: integer
+
+    BackupRequest:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [full, incremental, differential]
+          description: Type of backup to perform
+        storage:
+          type: string
+          enum: [local, s3, gcs, azure]
+          description: Storage backend to use
+        compression:
+          type: string
+          enum: [none, gzip, brotli, lz4]
+          default: gzip
+          description: Compression method
+        encryption:
+          type: boolean
+          default: false
+          description: Whether to encrypt backup
+        description:
+          type: string
+          maxLength: 500
+          description: Optional backup description
+        tags:
+          type: array
+          items:
+            type: string
+          description: Optional backup tags
+        options:
+          type: object
+          properties:
+            includeMemory:
+              type: boolean
+              default: true
+            includeSessions:
+              type: boolean
+              default: true
+            includeConfig:
+              type: boolean
+              default: true
+            compression:
+              type: string
+              enum: [none, gzip, brotli, lz4]
+
+    BackupJobResponse:
+      type: object
+      properties:
+        jobId:
+          type: string
+          description: Unique job identifier
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        type:
+          type: string
+          enum: [full, incremental, differential]
+        startedAt:
+          type: string
+          format: date-time
+        estimatedCompletion:
+          type: string
+          format: date-time
+        progress:
+          type: object
+          properties:
+            percentage:
+              type: number
+              minimum: 0
+              maximum: 100
+            currentStep:
+              type: string
+            totalSteps:
+              type: integer
+
+    BackupJob:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+        type:
+          type: string
+          enum: [full, incremental, differential]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        duration:
+          type: number
+          description: Job duration in seconds
+        size:
+          type: integer
+          description: Backup size in bytes
+        error:
+          type: string
+          description: Error message if failed
+        progress:
+          type: object
+          properties:
+            percentage:
+              type: number
+            currentStep:
+              type: string
+            totalSteps:
+              type: integer
+            bytesProcessed:
+              type: integer
+            estimatedTimeRemaining:
+              type: number
+
+    BackupJobsList:
+      type: object
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/BackupJob'
+        pagination:
+          type: object
+          properties:
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+            hasMore:
+              type: boolean
+
+    BackupSearchRequest:
+      type: object
+      properties:
+        status:
+          type: array
+          items:
+            type: string
+            enum: [completed, failed, running]
+        type:
+          type: array
+          items:
+            type: string
+            enum: [full, incremental, differential]
+        dateFrom:
+          type: string
+          format: date-time
+        dateTo:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+        minSize:
+          type: integer
+        maxSize:
+          type: integer
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+
+    BackupSearchResults:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BackupJob'
+        pagination:
+          type: object
+          properties:
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+        filters:
+          type: object
+          description: Applied search filters
+
+    RestoreRequest:
+      type: object
+      required: [backupId]
+      properties:
+        backupId:
+          type: string
+          description: ID of backup to restore from
+        targetPath:
+          type: string
+          description: Target path for restoration
+        overwrite:
+          type: boolean
+          default: false
+          description: Whether to overwrite existing files
+        verify:
+          type: boolean
+          default: true
+          description: Whether to verify backup before restore
+        options:
+          type: object
+          properties:
+            restoreMemory:
+              type: boolean
+              default: true
+            restoreSessions:
+              type: boolean
+              default: true
+            restoreConfig:
+              type: boolean
+              default: false
+
+    RestoreResponse:
+      type: object
+      properties:
+        jobId:
+          type: string
+          description: Restore job ID
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        estimatedDuration:
+          type: number
+          description: Estimated restore duration in seconds
+        backupInfo:
+          type: object
+          properties:
+            id:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            size:
+              type: integer
+            type:
+              type: string
+
+    BackupVerificationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          description: Whether backup is valid
+        checksum:
+          type: string
+          description: Backup checksum
+        size:
+          type: integer
+          description: Backup size in bytes
+        issues:
+          type: array
+          items:
+            type: string
+          description: List of issues found
+        verificationTime:
+          type: number
+          description: Verification time in seconds
+
+    BackupSchedule:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [full, incremental, differential]
+        cron:
+          type: string
+          description: Cron expression for schedule
+        enabled:
+          type: boolean
+        lastRun:
+          type: string
+          format: date-time
+        nextRun:
+          type: string
+          format: date-time
+        options:
+          type: object
+          properties:
+            retention:
+              type: integer
+              description: Number of backups to retain
+            compression:
+              type: string
+              enum: [none, gzip, brotli, lz4]
+            storage:
+              type: string
+              enum: [local, s3, gcs, azure]
+
+    CreateBackupScheduleRequest:
+      type: object
+      required: [name, type, cron]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        type:
+          type: string
+          enum: [full, incremental, differential]
+        cron:
+          type: string
+          pattern: '^[0-9\*\-\,\/\s]+$'
+        enabled:
+          type: boolean
+          default: true
+        storage:
+          type: string
+          enum: [local, s3, gcs, azure]
+          default: local
+        compression:
+          type: string
+          enum: [none, gzip, brotli, lz4]
+          default: gzip
+        options:
+          type: object
+          properties:
+            retention:
+              type: integer
+              minimum: 1
+              maximum: 365
+            timeout:
+              type: integer
+              minimum: 1
+              maximum: 1440
+
+    UpdateBackupScheduleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        cron:
+          type: string
+          pattern: '^[0-9\*\-\,\/\s]+$'
+        enabled:
+          type: boolean
+        storage:
+          type: string
+          enum: [local, s3, gcs, azure]
+        compression:
+          type: string
+          enum: [none, gzip, brotli, lz4]
+        timeout:
+          type: integer
+          minimum: 1
+          maximum: 1440
+
+    # Error Schemas
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+        timestamp:
+          type: string
+          format: date-time
+
+    ValidationError:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        error:
+          type: string
+          enum: [Validation failed]
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+              value:
+                type: string
+
+    ServiceUnavailableError:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+
+    NotFoundError:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          enum: [BACKUP_JOB_NOT_FOUND, RESOURCE_NOT_FOUND]
+
+tags:
+  - name: Health
+    description: System health and status endpoints
+  - name: Authentication
+    description: JWT-based WebSocket authentication
+  - name: Monitoring
+    description: System monitoring, metrics, and alerting
+  - name: Backup
+    description: Backup system management and operations

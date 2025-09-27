@@ -68,7 +68,7 @@ export class FileSystemBackupHandler extends BaseStorageBackupHandler {
           const { stdout } = await execAsync(`df -h "${cwd}"`);
           const lines = stdout.trim().split('\n');
           if (lines.length > 1) {
-            const parts = lines[1].split(/\s+/);
+            const parts = lines[1]!.split(/\s+/);
             diskUsage = {
               filesystem: parts[0],
               size: parts[1],
@@ -84,10 +84,10 @@ export class FileSystemBackupHandler extends BaseStorageBackupHandler {
           const { stdout } = await execAsync(`wmic logicaldisk where caption="${drive}" get Size,FreeSpace /format:csv`);
           const lines = stdout.trim().split('\n');
           if (lines.length > 2) {
-            const parts = lines[2].split(',');
+            const parts = lines[2]!.split(',');
             if (parts.length >= 3) {
-              const freeSpace = parseInt(parts[1], 10);
-              const totalSize = parseInt(parts[2], 10);
+              const freeSpace = parseInt(parts[1]!, 10);
+              const totalSize = parseInt(parts[2]!, 10);
               diskUsage = {
                 drive,
                 totalSize: Math.round(totalSize / (1024 * 1024 * 1024)) + ' GB',

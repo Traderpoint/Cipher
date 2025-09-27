@@ -1,0 +1,137 @@
+################################################################################
+# Production-Optimized Multi-Stage Dockerfile for Cipher
+# Optimized for minimal image size, security, and performance
+################################################################################
+
+################################################################################
+# Build stage - includes dev dependencies and build tools
+################################################################################
+FROM node:20.18.1-alpine AS builder
+
+# Build arguments
+ARG BUILD_UI=true
+ARG NODE_VERSION=20.18.1
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+
+# Labels for image metadata
+LABEL maintainer="BYTEROVER" \
+      org.opencontainers.image.title="Cipher Framework" \
+      org.opencontainers.image.description="Memory-powered AI agent framework with real-time WebSocket communication" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.vendor="BYTEROVER"
+
+# Install build dependencies for native modules
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package*.json pnpm-lock.yaml ./
+
+# Install pnpm
+RUN npm install -g pnpm@9.14.0
+
+# Install dependencies with frozen lockfile for reproducible builds
+RUN pnpm install --frozen-lockfile --production=false
+
+# Copy source code
+COPY . .
+
+# Build application with UI by default
+RUN if [ "$BUILD_UI" = "true" ]; then \
+        pnpm run build; \
+    else \
+        pnpm run build:no-ui; \
+    fi
+
+# Clean up and prepare production node_modules
+RUN pnpm prune --prod && \
+    pnpm store prune && \
+    rm -rf /root/.npm /tmp/* /usr/lib/node_modules/npm/man /usr/lib/node_modules/npm/doc /usr/lib/node_modules/npm/html /usr/lib/node_modules/npm/scripts
+
+################################################################################
+# Production stage - minimal Alpine with security hardening
+################################################################################
+FROM node:20.18.1-alpine AS production
+
+# Security: Update packages and remove package manager
+RUN apk --no-cache upgrade && \
+    apk --no-cache add \
+    dumb-init \
+    tini \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# Create non-root user with specific UID/GID for security
+RUN addgroup -g 1001 -S cipher && \
+    adduser -S cipher -u 1001 -G cipher -h /app -s /bin/sh
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/.cipher/database \
+             /app/.cipher/logs \
+             /app/.cipher/cache \
+             /app/.cipher/tmp && \
+    chown -R cipher:cipher /app/.cipher
+
+# Copy only essential production files from builder
+COPY --from=builder --chown=cipher:cipher /app/dist ./dist
+COPY --from=builder --chown=cipher:cipher /app/node_modules ./node_modules
+COPY --from=builder --chown=cipher:cipher /app/package.json ./
+COPY --from=builder --chown=cipher:cipher /app/memAgent ./memAgent
+
+# Copy production configuration files
+COPY --chown=cipher:cipher docker/production/.env.production ./.env
+
+# Set production environment variables
+ENV NODE_ENV=production \
+    PORT=3000 \
+    CONFIG_FILE=/app/memAgent/cipher.yml \
+    NODE_OPTIONS="--max-old-space-size=2048" \
+    CIPHER_LOG_LEVEL=info \
+    REDACT_SECRETS=true \
+    # Security settings
+    NODE_TLS_REJECT_UNAUTHORIZED=1 \
+    # Performance settings
+    UV_THREADPOOL_SIZE=16
+
+# Switch to non-root user early
+USER cipher
+
+# Create volume mount points
+VOLUME ["/app/.cipher"]
+
+# Health check with proper timeout and retries
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD node -e " \
+    const http = require('http'); \
+    const options = { \
+      host: 'localhost', \
+      port: process.env.PORT || 3000, \
+      path: '/health', \
+      timeout: 5000 \
+    }; \
+    const req = http.request(options, (res) => { \
+      process.exit(res.statusCode === 200 ? 0 : 1); \
+    }); \
+    req.on('error', () => process.exit(1)); \
+    req.on('timeout', () => process.exit(1)); \
+    req.end();"
+
+# Expose port
+EXPOSE $PORT
+
+# Use tini as init system for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start application with proper signal handling
+CMD ["node", "dist/src/app/index.cjs", "--mode", "api", "--port", "3000", "--host", "0.0.0.0", "--agent", "/app/memAgent/cipher.yml"]

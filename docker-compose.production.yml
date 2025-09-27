@@ -1,0 +1,281 @@
+################################################################################
+# Production Docker Compose Configuration for Cipher Framework
+# Multi-service setup with Redis, PostgreSQL, monitoring, and load balancing
+################################################################################
+
+version: '3.8'
+
+services:
+  # Redis for caching and session storage
+  redis:
+    image: redis:7.2-alpine
+    container_name: cipher-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+      - ./docker/production/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    ports:
+      - "127.0.0.1:6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - cipher-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:16-alpine
+    container_name: cipher-postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-cipherdb}
+      - POSTGRES_USER=${POSTGRES_USER:-cipheruser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/production/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./docker/production/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cipheruser} -d ${POSTGRES_DB:-cipherdb}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - cipher-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Main Cipher API service
+  cipher-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+      args:
+        - BUILD_UI=true
+        - BUILD_DATE=${BUILD_DATE}
+        - VCS_REF=${VCS_REF}
+        - VERSION=${VERSION}
+    image: cipher-api:${VERSION:-latest}
+    container_name: cipher-api
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - CIPHER_API_PREFIX=""
+      - CIPHER_LOG_LEVEL=${LOG_LEVEL:-info}
+      - REDACT_SECRETS=true
+      # Database configuration
+      - STORAGE_DATABASE_TYPE=postgresql
+      - CIPHER_PG_URL=postgres://${POSTGRES_USER:-cipheruser}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cipherdb}
+      # Cache configuration
+      - STORAGE_CACHE_TYPE=redis
+      - STORAGE_CACHE_HOST=redis
+      - STORAGE_CACHE_PORT=6379
+      - STORAGE_CACHE_PASSWORD=${REDIS_PASSWORD}
+      # Security
+      - JWT_SECRET=${JWT_SECRET}
+      - CIPHER_ENCRYPTION_KEY=${CIPHER_ENCRYPTION_KEY}
+      # Performance
+      - CIPHER_WAL_FLUSH_INTERVAL=5000
+      - NODE_OPTIONS=--max-old-space-size=2048
+    env_file:
+      - ./docker/production/.env.production
+    volumes:
+      - cipher-data:/app/.cipher
+      - cipher-logs:/app/.cipher/logs
+      - ./memAgent:/app/memAgent:ro
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "const http = require('http'); const req = http.request({host:'localhost',port:3000,path:'/health'}, (res) => process.exit(res.statusCode === 200 ? 0 : 1)); req.on('error', () => process.exit(1)); req.end();"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - cipher-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Nginx reverse proxy with SSL termination
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: cipher-nginx
+    depends_on:
+      - cipher-api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/production/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/production/ssl:/etc/nginx/ssl:ro
+      - cipher-logs:/var/log/cipher:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - cipher-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cipher-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./docker/production/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    restart: unless-stopped
+    networks:
+      - cipher-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cipher-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/production/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./docker/production/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "127.0.0.1:3001:3000"
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    networks:
+      - cipher-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Log aggregation with Fluentd
+  fluentd:
+    build:
+      context: ./docker/production/fluentd
+      dockerfile: Dockerfile
+    container_name: cipher-fluentd
+    volumes:
+      - ./docker/production/fluentd/conf:/fluentd/etc:ro
+      - cipher-logs:/var/log/cipher
+    ports:
+      - "127.0.0.1:24224:24224"
+    restart: unless-stopped
+    networks:
+      - cipher-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Backup service
+  backup:
+    build:
+      context: ./docker/production/backup
+      dockerfile: Dockerfile
+    container_name: cipher-backup
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+      - POSTGRES_DB=${POSTGRES_DB:-cipherdb}
+      - POSTGRES_USER=${POSTGRES_USER:-cipheruser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+      - S3_BUCKET=${BACKUP_S3_BUCKET}
+      - AWS_ACCESS_KEY_ID=${BACKUP_AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${BACKUP_AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${BACKUP_AWS_REGION:-us-east-1}
+    volumes:
+      - backup-data:/backups
+      - cipher-data:/app/.cipher:ro
+    restart: unless-stopped
+    networks:
+      - cipher-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  cipher-data:
+    driver: local
+  cipher-logs:
+    driver: local
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  backup-data:
+    driver: local
+
+networks:
+  cipher-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
