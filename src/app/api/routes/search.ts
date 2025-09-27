@@ -10,6 +10,7 @@ import { MemAgent } from '@core/brain/memAgent/index.js';
 // TODO: SearchService will be implemented in the future
 // import { SearchService } from '@core/ai/search/search-service.js';
 import { successResponse, errorResponse, ERROR_CODES } from '../utils/response.js';
+import { validateSearchMessages, validateSearchSessions } from '../middleware/validation.js';
 import { logger } from '@core/logger/index.js';
 
 export function createSearchRoutes(_agent: MemAgent): Router {
@@ -47,20 +48,9 @@ export function createSearchRoutes(_agent: MemAgent): Router {
 	 * - limit: Maximum number of results (optional, default: 50)
 	 * - offset: Pagination offset (optional, default: 0)
 	 */
-	router.get('/messages', async (req: Request, res: Response) => {
+	router.get('/messages', validateSearchMessages, async (req: Request, res: Response) => {
 		try {
 			const { q, sessionId, role, limit = 50, offset = 0 } = req.query;
-
-			if (!q || typeof q !== 'string') {
-				return errorResponse(
-					res,
-					ERROR_CODES.BAD_REQUEST,
-					'Query parameter "q" is required and must be a string',
-					400,
-					undefined,
-					req.requestId
-				);
-			}
 
 			logger.info('Message search requested', {
 				requestId: req.requestId,
@@ -163,20 +153,9 @@ export function createSearchRoutes(_agent: MemAgent): Router {
 	 * Query parameters:
 	 * - q: Search query (required)
 	 */
-	router.get('/sessions', async (req: Request, res: Response) => {
+	router.get('/sessions', validateSearchSessions, async (req: Request, res: Response) => {
 		try {
 			const { q } = req.query;
-
-			if (!q || typeof q !== 'string') {
-				return errorResponse(
-					res,
-					ERROR_CODES.BAD_REQUEST,
-					'Query parameter "q" is required and must be a string',
-					400,
-					undefined,
-					req.requestId
-				);
-			}
 
 			logger.info('Session search requested', {
 				requestId: req.requestId,

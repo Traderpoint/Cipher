@@ -37,6 +37,7 @@ Vyvinuto týmem [Byterover](https://byterover.dev/)
 - Snadné sdílení kódovacích vzpomínek napříč vývojovým týmem v reálném čase
 - Duální paměťová vrstva zachycující Systém 1 (programovací koncepty, obchodní logiku a minulé interakce) a Systém 2 (kroky uvažování modelu při generování kódu)
 - Instalace do vašeho IDE s nulovou konfigurací
+- **Pokročilé zabezpečení** s komplexní API validací a JWT autentizací pro WebSocket připojení
 
 ## Rychlý start
 
@@ -385,13 +386,77 @@ Sledujte naš komplexní tutoárial o integraci Cipher s Claude Code přes MCP p
 
 Pro podrobné instrukce konfigurace viz [průvodce CLI kódovacích agentů](./examples/02-cli-coding-agents/README.md).
 
+## Zabezpečení
+
+Cipher implementuje komplexní bezpečnostní systém pro ochranu všech API endpointů a WebSocket připojení.
+
+### Nové bezpečnostní funkce
+
+**1. Kompletní API validace**
+- Middleware pro validaci všech zranitelných endpointů (vector, memory, search, webhook, config, monitoring)
+- Sanitizace všech textových vstupů proti XSS útokům
+- Validace typu dat, délky a formátu pro všechny parametry
+- Automatické zachytávání a logování neplatných požadavků
+
+**2. JWT autentizace pro WebSocket**
+- Plný JWT-based autentizační systém pro WebSocket připojení
+- Podpora 3 metod autentizace:
+  - Query parameter: `ws://localhost:3001?token=JWT_TOKEN`
+  - Authorization header: `Authorization: Bearer JWT_TOKEN`
+  - WebSocket subprotocol: `Sec-WebSocket-Protocol: cipher-jwt-JWT_TOKEN`
+- Nové REST API endpointy pro správu tokenů:
+  - `POST /api/auth/websocket/token` - Generování JWT tokenů
+  - `POST /api/auth/websocket/verify` - Ověření platnosti tokenů
+  - `GET /api/auth/websocket/info` - Informace o autentizačním systému
+
+**3. Oprávnění a role**
+- Granulární systém oprávnění: `read`, `write`, `admin`, `monitor`
+- Session-based izolace pro různé uživatele/klienty
+- Automatické vypršení tokenů s konfigurovatelnou platností
+
+### Používání JWT autentizace
+
+```bash
+# 1. Vygenerování JWT tokenu
+curl -X POST http://localhost:3001/api/auth/websocket/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "my-session",
+    "userId": "user-123",
+    "permissions": ["read", "write"],
+    "expiresIn": "24h"
+  }'
+
+# 2. Připojení k WebSocket s tokenem
+# Metoda 1: Query parameter
+wscat -c "ws://localhost:3001?token=YOUR_JWT_TOKEN"
+
+# Metoda 2: Authorization header
+wscat -c ws://localhost:3001 -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Metoda 3: Subprotocol
+wscat -c ws://localhost:3001 -s "cipher-jwt-YOUR_JWT_TOKEN"
+```
+
+### Environment proměnné pro zabezpečení
+
+```bash
+# JWT konfigurace (volitelné)
+CIPHER_JWT_SECRET=your-secure-secret-key
+CIPHER_JWT_EXPIRY=24h
+CIPHER_JWT_ISSUER=cipher-websocket
+```
+
+**Poznámka:** Pokud není nastaven `CIPHER_JWT_SECRET`, Cipher automaticky vygeneruje bezpečný klíč. Pro produkční použití doporučujeme nastavit vlastní klíč.
+
 ## Dokumentace
 
 ###  Kompletní dokumentace
 
 | Téma                                                        | Popis                                                                       |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| [API Reference](./docs/api-reference.md)                     | Kompletní REST API dokumentace pro všech 47 endpointů a WebSocket komunikaci |
+| [API Reference](./docs/api-reference.md)                     | Kompletní REST API dokumentace pro všech 50 endpointů a WebSocket komunikaci |
+| [Security Guide](./docs/security.md)                       | Komprehensivní průvodce zabezpečením, JWT autentizace a API validace |
 | [Monitoring & Analytics](./docs/monitoring.md)               | Systémové monitorování, výkonnostní analytika, sledování chyb a health dashboardy |
 | [Konfigurace](./docs/configuration.md)                     | Kompletní průvodce konfiguraci včetně nastavení agentů, embeddingů a vector stores |
 | [LLM Poskytovatelé](./docs/llm-providers.md)                     | Detailní nastavení pro OpenAI, Anthropic, AWS, Azure, Qwen, Ollama, LM Studio         |

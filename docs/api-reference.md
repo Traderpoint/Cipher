@@ -4,10 +4,11 @@ Kompletní reference pro všechny REST API endpointy v Cipher projektu. API serv
 
 ## Přehled
 
-- **Celkem endpointů**: 47 HTTP + 1 WebSocket
+- **Celkem endpointů**: 50 HTTP + 1 WebSocket
 - **Prefix**: `/api` (konfigurovatelný)
 - **Formát**: JSON
-- **Autentizace**: Momentálně není implementována
+- **Autentizace**: JWT tokeny pro WebSocket + kompletní API validace
+- **Bezpečnost**: Middleware validace pro všechny zranitelné endpointy
 
 ## Core Infrastructure
 
@@ -46,6 +47,173 @@ curl -X POST http://localhost:3001/api/reset \
   -H "Content-Type: application/json" \
   -d '{"sessionId": "optional-session-id"}'
 ```
+
+## Authentication & Security
+
+Cipher implementuje komplexní bezpečnostní systém s JWT autentizací pro WebSocket připojení a validačním middleware pro všechny API endpointy.
+
+### `POST /api/auth/websocket/token`
+Generování JWT tokenu pro WebSocket autentizaci.
+
+```bash
+curl -X POST http://localhost:3001/api/auth/websocket/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "my-session",
+    "userId": "user-123",
+    "permissions": ["read", "write"],
+    "expiresIn": "24h"
+  }'
+```
+
+**Parametry:**
+- `sessionId` (volitelné) - ID session (1-100 znaků)
+- `userId` (volitelné) - ID uživatele (1-100 znaků)
+- `permissions` (volitelné) - pole oprávnění: ["read", "write", "admin", "monitor"]
+- `expiresIn` (volitelné) - doba platnosti (formát: 1h, 30m, 7d)
+
+**Odpověď:**
+```json
+{
+  "status": "success",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresAt": "2024-01-16T10:30:00.000Z",
+    "permissions": ["read", "write"],
+    "sessionId": "my-session",
+    "userId": "user-123",
+    "usage": {
+      "websocketUrl": "ws://localhost:3001?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "authHeader": "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "subprotocol": "cipher-jwt-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }
+  }
+}
+```
+
+### `POST /api/auth/websocket/verify`
+Ověření platnosti JWT tokenu.
+
+```bash
+curl -X POST http://localhost:3001/api/auth/websocket/verify \
+  -H "Content-Type: application/json" \
+  -d '{"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}'
+```
+
+**Odpověď:**
+```json
+{
+  "status": "success",
+  "data": {
+    "valid": true,
+    "payload": {
+      "sessionId": "my-session",
+      "userId": "user-123",
+      "clientId": "uuid-v4-client-id",
+      "permissions": ["read", "write"],
+      "issuedAt": "2024-01-15T10:30:00.000Z",
+      "expiresAt": "2024-01-16T10:30:00.000Z"
+    }
+  }
+}
+```
+
+### `GET /api/auth/websocket/info`
+Informace o WebSocket autentizačním systému a dostupných metodách.
+
+```bash
+curl http://localhost:3001/api/auth/websocket/info
+```
+
+**Odpověď:**
+```json
+{
+  "status": "success",
+  "data": {
+    "description": "WebSocket JWT Authentication System",
+    "supportedMethods": [
+      {
+        "method": "query_parameter",
+        "example": "ws://localhost:3001?token=YOUR_JWT_TOKEN",
+        "description": "Pass token as query parameter"
+      },
+      {
+        "method": "authorization_header",
+        "example": "Authorization: Bearer YOUR_JWT_TOKEN",
+        "description": "Pass token in Authorization header during handshake"
+      },
+      {
+        "method": "subprotocol",
+        "example": "Sec-WebSocket-Protocol: cipher-jwt-YOUR_JWT_TOKEN",
+        "description": "Pass token as WebSocket subprotocol"
+      }
+    ],
+    "permissions": [
+      {
+        "name": "read",
+        "description": "Read access to WebSocket messages and events"
+      },
+      {
+        "name": "write",
+        "description": "Write access to send messages through WebSocket"
+      },
+      {
+        "name": "admin",
+        "description": "Administrative access to manage connections"
+      },
+      {
+        "name": "monitor",
+        "description": "Access to monitoring and metrics events"
+      }
+    ],
+    "tokenGeneration": {
+      "endpoint": "/api/auth/websocket/token",
+      "method": "POST",
+      "description": "Generate new JWT token for WebSocket authentication"
+    },
+    "tokenVerification": {
+      "endpoint": "/api/auth/websocket/verify",
+      "method": "POST",
+      "description": "Verify JWT token validity"
+    }
+  }
+}
+```
+
+### WebSocket autentizace
+
+WebSocket připojení podporuje 3 metody autentizace:
+
+**1. Query parameter**
+```bash
+wscat -c "ws://localhost:3001?token=YOUR_JWT_TOKEN"
+```
+
+**2. Authorization header**
+```bash
+wscat -c ws://localhost:3001 -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**3. WebSocket subprotocol**
+```bash
+wscat -c ws://localhost:3001 -s "cipher-jwt-YOUR_JWT_TOKEN"
+```
+
+### API validace a zabezpečení
+
+Všechny API endpointy používají middleware pro:
+- **Validaci vstupů** - kontrola typu dat, délky a formátu
+- **Sanitizaci** - ochrana proti XSS útokům
+- **Bezpečnostní kontroly** - validace session ID, file paths, URL formátů
+- **Error handling** - strukturované odpovědi s detailními chybovými zprávami
+
+Chráněné endpointy zahrnují:
+- `/api/vector/*` - všechny vector operace
+- `/api/memory/*` - paměťové operace
+- `/api/search/*` - vyhledávací endpointy
+- `/api/webhook/*` - webhook management
+- `/api/config/*` - konfigurační API
+- `/api/monitoring/*` - monitoring API
 
 ## Message Processing
 

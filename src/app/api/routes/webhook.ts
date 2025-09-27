@@ -144,20 +144,9 @@ export function createWebhookRoutes(_agent: MemAgent): Router {
 	 * GET /api/webhooks/:webhookId
 	 * Get specific webhook details
 	 */
-	router.get('/:webhookId', async (req: Request, res: Response) => {
+	router.get('/:webhookId', validateWebhookId, async (req: Request, res: Response) => {
 		try {
 			const { webhookId } = req.params;
-
-			if (!webhookId) {
-				return errorResponse(
-					res,
-					ERROR_CODES.VALIDATION_ERROR,
-					'Webhook ID is required',
-					400,
-					undefined,
-					req.requestId
-				);
-			}
 
 			const webhook = webhooks.get(webhookId);
 			if (!webhook) {
@@ -206,20 +195,9 @@ export function createWebhookRoutes(_agent: MemAgent): Router {
 	 * DELETE /api/webhooks/:webhookId
 	 * Remove webhook
 	 */
-	router.delete('/:webhookId', async (req: Request, res: Response) => {
+	router.delete('/:webhookId', validateWebhookId, async (req: Request, res: Response) => {
 		try {
 			const { webhookId } = req.params;
-
-			if (!webhookId) {
-				return errorResponse(
-					res,
-					ERROR_CODES.VALIDATION_ERROR,
-					'Webhook ID is required',
-					400,
-					undefined,
-					req.requestId
-				);
-			}
 
 			const webhook = webhooks.get(webhookId);
 			if (!webhook) {
@@ -271,20 +249,9 @@ export function createWebhookRoutes(_agent: MemAgent): Router {
 	 * POST /api/webhooks/:webhookId/test
 	 * Test webhook endpoint
 	 */
-	router.post('/:webhookId/test', async (req: Request, res: Response) => {
+	router.post('/:webhookId/test', validateWebhookId, async (req: Request, res: Response) => {
 		try {
 			const { webhookId } = req.params;
-
-			if (!webhookId) {
-				return errorResponse(
-					res,
-					ERROR_CODES.VALIDATION_ERROR,
-					'Webhook ID is required',
-					400,
-					undefined,
-					req.requestId
-				);
-			}
 
 			const webhook = webhooks.get(webhookId);
 			if (!webhook) {

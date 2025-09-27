@@ -8,6 +8,11 @@ import { Router, Request, Response } from 'express';
 import { MemAgent } from '@core/brain/memAgent/index.js';
 import { successResponse, errorResponse, ERROR_CODES } from '../utils/response.js';
 import { logger } from '@core/logger/index.js';
+import {
+	validateMemorySearch,
+	validateMemoryStore,
+	validateReasoningStore,
+} from '../middleware/validation.js';
 
 const MEMORY_TOOL_NAMES = [
 	'cipher_extract_and_operate_memory',
@@ -308,7 +313,7 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 	 * POST /memory/search
 	 * Search memory for relevant information
 	 */
-	router.post('/search', async (req: Request, res: Response) => {
+	router.post('/search', validateMemorySearch, async (req: Request, res: Response) => {
 		try {
 			const { query, limit = 10, sessionId } = req.body;
 
@@ -396,7 +401,7 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 	 * POST /memory/store
 	 * Store new information in memory
 	 */
-	router.post('/store', async (req: Request, res: Response) => {
+	router.post('/store', validateMemoryStore, async (req: Request, res: Response) => {
 		try {
 			const {
 				content,
@@ -571,7 +576,7 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 	 * POST /memory/reasoning
 	 * Store reasoning traces in reflection memory
 	 */
-	router.post('/reasoning', async (req: Request, res: Response) => {
+	router.post('/reasoning', validateReasoningStore, async (req: Request, res: Response) => {
 		try {
 			const { reasoning, quality = 'high', sessionId, metadata = {} } = req.body;
 
@@ -669,7 +674,7 @@ export function createMemoryRoutes(agent: MemAgent): Router {
 	 * POST /memory/reasoning/search
 	 * Search reasoning patterns in reflection memory
 	 */
-	router.post('/reasoning/search', async (req: Request, res: Response) => {
+	router.post('/reasoning/search', validateMemorySearch, async (req: Request, res: Response) => {
 		try {
 			const { query, limit = 10, sessionId } = req.body;
 

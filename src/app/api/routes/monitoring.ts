@@ -3,6 +3,7 @@ import { metricsCollector, MonitoringIntegration, errorTracker } from '../../../
 import { alertManager } from '../../../core/monitoring/alert-manager.js';
 import { wsNotifier } from '../../../core/monitoring/websocket-notifier.js';
 import { dashboardManager } from '../../../core/monitoring/dashboard-manager.js';
+import { validateAlertRule, validateRuleId, validateToggleRule, validateConfigId, validateHistoricalQuery } from '../middleware/validation.js';
 
 const router = Router();
 
@@ -524,17 +525,9 @@ router.get('/alerts', (_req: Request, res: Response) => {
  * @access Public
  */
 // @ts-ignore: Express route handlers don't need explicit returns
-router.post('/alerts/rules', (req: Request, res: Response) => {
+router.post('/alerts/rules', validateAlertRule, (req: Request, res: Response) => {
 	try {
 		const rule = req.body;
-
-		// Basic validation
-		if (!rule.id || !rule.name || !rule.condition || rule.threshold === undefined) {
-			return res.status(400).json({
-				error: 'Missing required fields',
-				required: ['id', 'name', 'condition', 'threshold']
-			});
-		}
 
 		alertManager.addRule(rule);
 
@@ -557,15 +550,9 @@ router.post('/alerts/rules', (req: Request, res: Response) => {
  * @access Public
  */
 // @ts-ignore: Express route handlers don't need explicit returns
-router.delete('/alerts/rules/:ruleId', (req: Request, res: Response) => {
+router.delete('/alerts/rules/:ruleId', validateRuleId, (req: Request, res: Response) => {
 	try {
 		const { ruleId } = req.params;
-
-		if (!ruleId) {
-			return res.status(400).json({
-				error: 'Rule ID is required'
-			});
-		}
 
 		const success = alertManager.removeRule(ruleId);
 
@@ -595,22 +582,10 @@ router.delete('/alerts/rules/:ruleId', (req: Request, res: Response) => {
  * @access Public
  */
 // @ts-ignore: Express route handlers don't need explicit returns
-router.put('/alerts/rules/:ruleId/toggle', (req: Request, res: Response) => {
+router.put('/alerts/rules/:ruleId/toggle', validateRuleId, validateToggleRule, (req: Request, res: Response) => {
 	try {
 		const { ruleId } = req.params;
 		const { enabled } = req.body;
-
-		if (!ruleId) {
-			return res.status(400).json({
-				error: 'Rule ID is required'
-			});
-		}
-
-		if (typeof enabled !== 'boolean') {
-			return res.status(400).json({
-				error: 'Invalid enabled value, must be boolean'
-			});
-		}
 
 		const success = alertManager.toggleRule(ruleId, enabled);
 
@@ -699,15 +674,9 @@ router.get('/dashboard/configs', async (_req: Request, res: Response) => {
  * @access Public
  */
 // @ts-ignore: Express route handlers don't need explicit returns
-router.get('/dashboard/configs/:configId', async (req: Request, res: Response) => {
+router.get('/dashboard/configs/:configId', validateConfigId, async (req: Request, res: Response) => {
 	try {
 		const { configId } = req.params;
-
-		if (!configId) {
-			return res.status(400).json({
-				error: 'Config ID is required'
-			});
-		}
 
 		const config = await dashboardManager.getDashboardConfig(configId);
 
@@ -756,15 +725,9 @@ router.post('/dashboard/configs', async (req: Request, res: Response) => {
  * @access Public
  */
 // @ts-ignore: Express route handlers don't need explicit returns
-router.get('/dashboard/configs/:configId/export', async (req: Request, res: Response) => {
+router.get('/dashboard/configs/:configId/export', validateConfigId, async (req: Request, res: Response) => {
 	try {
 		const { configId } = req.params;
-
-		if (!configId) {
-			return res.status(400).json({
-				error: 'Config ID is required'
-			});
-		}
 
 		const config = await dashboardManager.exportDashboardConfig(configId);
 
@@ -784,7 +747,7 @@ router.get('/dashboard/configs/:configId/export', async (req: Request, res: Resp
  * @desc Get historical metrics data
  * @access Public
  */
-router.get('/dashboard/historical', (req: Request, res: Response) => {
+router.get('/dashboard/historical', validateHistoricalQuery, (req: Request, res: Response) => {
 	try {
 		const hours = parseInt(req.query.hours as string) || 24;
 		const format = req.query.format as 'json' | 'csv' || 'json';

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { MemAgent } from '@core/brain/memAgent/index.js';
 import { successResponse, errorResponse, ERROR_CODES } from '../utils/response.js';
+import { validateConfigSessionId } from '../middleware/validation.js';
 import { redactSensitiveData } from '../utils/security.js';
 import { logger } from '@core/logger/index.js';
 import { dump as yamlDump } from 'js-yaml';
@@ -98,21 +99,9 @@ export function createConfigRoutes(agent: MemAgent): Router {
 	 * GET /api/config/session/:sessionId
 	 * Get session-specific configuration
 	 */
-	router.get('/session/:sessionId', async (req: Request, res: Response) => {
+	router.get('/session/:sessionId', validateConfigSessionId, async (req: Request, res: Response) => {
 		try {
 			const { sessionId } = req.params;
-
-			if (!sessionId) {
-				errorResponse(
-					res,
-					ERROR_CODES.BAD_REQUEST,
-					'Session ID is required',
-					400,
-					undefined,
-					req.requestId
-				);
-				return;
-			}
 
 			logger.info('Getting session-specific configuration', {
 				requestId: req.requestId,

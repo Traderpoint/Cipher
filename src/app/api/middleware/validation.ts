@@ -204,3 +204,279 @@ export const validateListParams = [
 	query('offset').optional().isInt({ min: 0 }).withMessage('Offset must be a non-negative integer'),
 	handleValidationErrors,
 ];
+
+// Vector API validation schemas
+export const validateVectorEmbed = [
+	body('text')
+		.isString()
+		.isLength({ min: 1, max: 100000 })
+		.withMessage('Text must be a string between 1 and 100000 characters'),
+	body('collection')
+		.optional()
+		.isString()
+		.isLength({ min: 1, max: 100 })
+		.withMessage('Collection must be a string between 1 and 100 characters'),
+	sanitizeTextInput(['text', 'collection']),
+	handleValidationErrors,
+];
+
+export const validateVectorSearch = [
+	body('query')
+		.isString()
+		.isLength({ min: 1, max: 10000 })
+		.withMessage('Query must be a string between 1 and 10000 characters'),
+	body('collection')
+		.optional()
+		.isString()
+		.isLength({ min: 1, max: 100 })
+		.withMessage('Collection must be a string between 1 and 100 characters'),
+	body('limit')
+		.optional()
+		.isInt({ min: 1, max: 100 })
+		.withMessage('Limit must be between 1 and 100'),
+	body('threshold')
+		.optional()
+		.isFloat({ min: 0, max: 1 })
+		.withMessage('Threshold must be between 0 and 1'),
+	sanitizeTextInput(['query', 'collection']),
+	handleValidationErrors,
+];
+
+export const validateVectorStore = [
+	body('text')
+		.isString()
+		.isLength({ min: 1, max: 100000 })
+		.withMessage('Text must be a string between 1 and 100000 characters'),
+	body('metadata')
+		.optional()
+		.isObject()
+		.withMessage('Metadata must be an object'),
+	body('collection')
+		.optional()
+		.isString()
+		.isLength({ min: 1, max: 100 })
+		.withMessage('Collection must be a string between 1 and 100 characters'),
+	body('id')
+		.optional()
+		.isString()
+		.isLength({ min: 1, max: 100 })
+		.withMessage('ID must be a string between 1 and 100 characters'),
+	sanitizeTextInput(['text', 'collection', 'id']),
+	handleValidationErrors,
+];
+
+export const validateVectorId = [
+	param('id')
+		.isString()
+		.isLength({ min: 1, max: 100 })
+		.withMessage('Vector ID must be between 1 and 100 characters'),
+	query('collection')
+		.optional()
+		.isString()
+		.isLength({ min: 1, max: 100 })
+		.withMessage('Collection must be a string between 1 and 100 characters'),
+	handleValidationErrors,
+];
+
+// Memory API validation schemas
+export const validateMemorySearch = [
+	body('query')
+		.isString()
+		.isLength({ min: 1, max: 10000 })
+		.withMessage('Query must be a string between 1 and 10000 characters'),
+	body('limit')
+		.optional()
+		.isInt({ min: 1, max: 50 })
+		.withMessage('Limit must be between 1 and 50'),
+	body('sessionId')
+		.optional()
+		.custom(value => {
+			if (value && !isValidSessionId(value)) {
+				throw new Error('Invalid session ID format');
+			}
+			return true;
+		}),
+	sanitizeTextInput(['query']),
+	handleValidationErrors,
+];
+
+export const validateMemoryStore = [
+	body('content')
+		.isString()
+		.isLength({ min: 1, max: 100000 })
+		.withMessage('Content must be a string between 1 and 100000 characters'),
+	body('type')
+		.optional()
+		.isString()
+		.isIn(['knowledge', 'reflection', 'conversation'])
+		.withMessage('Type must be knowledge, reflection, or conversation'),
+	body('sessionId')
+		.optional()
+		.custom(value => {
+			if (value && !isValidSessionId(value)) {
+				throw new Error('Invalid session ID format');
+			}
+			return true;
+		}),
+	body('metadata')
+		.optional()
+		.isObject()
+		.withMessage('Metadata must be an object'),
+	sanitizeTextInput(['content', 'type']),
+	handleValidationErrors,
+];
+
+export const validateReasoningStore = [
+	body('reasoning')
+		.isString()
+		.isLength({ min: 1, max: 50000 })
+		.withMessage('Reasoning must be a string between 1 and 50000 characters'),
+	body('quality')
+		.optional()
+		.isString()
+		.isIn(['high', 'medium', 'low'])
+		.withMessage('Quality must be high, medium, or low'),
+	body('sessionId')
+		.optional()
+		.custom(value => {
+			if (value && !isValidSessionId(value)) {
+				throw new Error('Invalid session ID format');
+			}
+			return true;
+		}),
+	body('metadata')
+		.optional()
+		.isObject()
+		.withMessage('Metadata must be an object'),
+	sanitizeTextInput(['reasoning', 'quality']),
+	handleValidationErrors,
+];
+
+// Search API validation schemas
+export const validateSearchMessages = [
+	query('q')
+		.isString()
+		.isLength({ min: 1, max: 1000 })
+		.withMessage('Query must be a string between 1 and 1000 characters'),
+	query('sessionId')
+		.optional()
+		.custom(value => {
+			if (value && !isValidSessionId(value)) {
+				throw new Error('Invalid session ID format');
+			}
+			return true;
+		}),
+	query('role')
+		.optional()
+		.isString()
+		.isIn(['user', 'assistant', 'system', 'tool'])
+		.withMessage('Role must be user, assistant, system, or tool'),
+	query('limit')
+		.optional()
+		.isInt({ min: 1, max: 100 })
+		.withMessage('Limit must be between 1 and 100'),
+	query('offset')
+		.optional()
+		.isInt({ min: 0 })
+		.withMessage('Offset must be a non-negative integer'),
+	handleValidationErrors,
+];
+
+export const validateSearchSessions = [
+	query('q')
+		.isString()
+		.isLength({ min: 1, max: 1000 })
+		.withMessage('Query must be a string between 1 and 1000 characters'),
+	handleValidationErrors,
+];
+
+// Webhook API validation schemas
+export const validateWebhookCreate = [
+	body('url')
+		.isURL()
+		.withMessage('URL must be a valid URL'),
+	body('events')
+		.optional()
+		.isArray()
+		.withMessage('Events must be an array'),
+	body('events.*')
+		.optional()
+		.isString()
+		.withMessage('Each event must be a string'),
+	handleValidationErrors,
+];
+
+export const validateWebhookId = [
+	param('webhookId')
+		.isUUID()
+		.withMessage('Webhook ID must be a valid UUID'),
+	handleValidationErrors,
+];
+
+// Config API validation schemas
+export const validateConfigSessionId = [
+	param('sessionId')
+		.custom(value => {
+			if (!isValidSessionId(value)) {
+				throw new Error('Invalid session ID format');
+			}
+			return true;
+		}),
+	handleValidationErrors,
+];
+
+// Monitoring API validation schemas
+export const validateAlertRule = [
+	body('id')
+		.isString()
+		.isLength({ min: 1, max: 100 })
+		.withMessage('Rule ID must be between 1 and 100 characters'),
+	body('name')
+		.isString()
+		.isLength({ min: 1, max: 200 })
+		.withMessage('Rule name must be between 1 and 200 characters'),
+	body('condition')
+		.isString()
+		.isLength({ min: 1, max: 500 })
+		.withMessage('Condition must be between 1 and 500 characters'),
+	body('threshold')
+		.isNumeric()
+		.withMessage('Threshold must be a number'),
+	sanitizeTextInput(['id', 'name', 'condition']),
+	handleValidationErrors,
+];
+
+export const validateRuleId = [
+	param('ruleId')
+		.isString()
+		.isLength({ min: 1, max: 100 })
+		.withMessage('Rule ID must be between 1 and 100 characters'),
+	handleValidationErrors,
+];
+
+export const validateToggleRule = [
+	body('enabled')
+		.isBoolean()
+		.withMessage('Enabled must be a boolean'),
+	handleValidationErrors,
+];
+
+export const validateConfigId = [
+	param('configId')
+		.isString()
+		.isLength({ min: 1, max: 100 })
+		.withMessage('Config ID must be between 1 and 100 characters'),
+	handleValidationErrors,
+];
+
+export const validateHistoricalQuery = [
+	query('hours')
+		.optional()
+		.isInt({ min: 1, max: 8760 })
+		.withMessage('Hours must be between 1 and 8760 (1 year)'),
+	query('format')
+		.optional()
+		.isIn(['json', 'csv'])
+		.withMessage('Format must be json or csv'),
+	handleValidationErrors,
+];

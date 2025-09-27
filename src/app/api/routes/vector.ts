@@ -8,6 +8,12 @@ import { Router, Request, Response } from 'express';
 import { MemAgent } from '@core/brain/memAgent/index.js';
 import { successResponse, errorResponse, ERROR_CODES } from '../utils/response.js';
 import { logger } from '@core/logger/index.js';
+import {
+	validateVectorEmbed,
+	validateVectorSearch,
+	validateVectorStore,
+	validateVectorId,
+} from '../middleware/validation.js';
 
 export function createVectorRoutes(agent: MemAgent): Router {
 	const router = Router();
@@ -74,20 +80,9 @@ export function createVectorRoutes(agent: MemAgent): Router {
 	 * POST /vector/embed
 	 * Generate embeddings for text
 	 */
-	router.post('/embed', async (req: Request, res: Response) => {
+	router.post('/embed', validateVectorEmbed, async (req: Request, res: Response) => {
 		try {
 			const { text, collection = 'default' } = req.body;
-
-			if (!text || typeof text !== 'string') {
-				return errorResponse(
-					res,
-					ERROR_CODES.VALIDATION_ERROR,
-					'Text parameter is required and must be a string',
-					400,
-					undefined,
-					req.requestId
-				);
-			}
 
 			const embeddingManager = agent.services.embeddingManager;
 			if (!embeddingManager || !embeddingManager.isReady()) {
@@ -139,20 +134,9 @@ export function createVectorRoutes(agent: MemAgent): Router {
 	 * POST /vector/search
 	 * Perform similarity search in vector storage
 	 */
-	router.post('/search', async (req: Request, res: Response) => {
+	router.post('/search', validateVectorSearch, async (req: Request, res: Response) => {
 		try {
 			const { query, collection = 'knowledge', limit = 10, threshold = 0.7 } = req.body;
-
-			if (!query || typeof query !== 'string') {
-				return errorResponse(
-					res,
-					ERROR_CODES.VALIDATION_ERROR,
-					'Query parameter is required and must be a string',
-					400,
-					undefined,
-					req.requestId
-				);
-			}
 
 			const vectorStorage = agent.services.vectorStorage;
 			const embeddingManager = agent.services.embeddingManager;
@@ -229,20 +213,9 @@ export function createVectorRoutes(agent: MemAgent): Router {
 	 * POST /vector/store
 	 * Store text with metadata in vector storage
 	 */
-	router.post('/store', async (req: Request, res: Response) => {
+	router.post('/store', validateVectorStore, async (req: Request, res: Response) => {
 		try {
 			const { text, metadata = {}, collection = 'knowledge', id } = req.body;
-
-			if (!text || typeof text !== 'string') {
-				return errorResponse(
-					res,
-					ERROR_CODES.VALIDATION_ERROR,
-					'Text parameter is required and must be a string',
-					400,
-					undefined,
-					req.requestId
-				);
-			}
 
 			const vectorStorage = agent.services.vectorStorage;
 			const embeddingManager = agent.services.embeddingManager;
@@ -320,21 +293,10 @@ export function createVectorRoutes(agent: MemAgent): Router {
 	 * DELETE /vector/:id
 	 * Delete a vector by ID
 	 */
-	router.delete('/:id', async (req: Request, res: Response) => {
+	router.delete('/:id', validateVectorId, async (req: Request, res: Response) => {
 		try {
 			const { id } = req.params;
 			const { collection = 'knowledge' } = req.query;
-
-			if (!id) {
-				return errorResponse(
-					res,
-					ERROR_CODES.VALIDATION_ERROR,
-					'Vector ID is required',
-					400,
-					undefined,
-					req.requestId
-				);
-			}
 
 			const vectorStorage = agent.services.vectorStorage;
 

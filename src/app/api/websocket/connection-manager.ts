@@ -14,6 +14,7 @@ import {
 	WebSocketConnectionStats,
 	WebSocketEventType,
 } from './types.js';
+import { wsJWTAuth, AuthenticatedWebSocket } from './jwt-auth.js';
 
 export class WebSocketConnectionManager {
 	private connections = new Map<string, WebSocketConnection>();
@@ -55,10 +56,23 @@ export class WebSocketConnectionManager {
 	}
 
 	/**
-	 * Add a new WebSocket connection
+	 * Add a new WebSocket connection with JWT authentication
 	 */
-	addConnection(ws: WebSocket, sessionId?: string, clientIP?: string): string {
-		// Check connection rate limit first
+	addConnection(ws: WebSocket, request?: any, sessionId?: string, clientIP?: string): string {
+		// JWT Authentication first
+		let authenticatedWs: AuthenticatedWebSocket | null = null;
+		if (request) {
+			authenticatedWs = wsJWTAuth.authenticateConnection(ws, request);
+			if (!authenticatedWs) {
+				logger.warn('WebSocket JWT authentication failed', { clientIP });
+				ws.close(1008, 'Authentication failed');
+				throw new Error('WebSocket authentication failed');
+			}
+			// Use sessionId from JWT if available
+			sessionId = authenticatedWs.sessionId || sessionId;
+		}
+
+		// Check connection rate limit
 		const connectionLimit = this.connectionRateLimiter.checkLimit('new', clientIP, false);
 		if (connectionLimit.isBlocked) {
 			logger.warn('Connection rate limit exceeded', {
@@ -84,7 +98,7 @@ export class WebSocketConnectionManager {
 
 		const connection: WebSocketConnection = {
 			id: connectionId,
-			ws,
+			ws: authenticatedWs || ws,
 			sessionId: sessionId || undefined,
 			subscribedEvents: new Set(),
 			connectedAt: now,

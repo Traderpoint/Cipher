@@ -156,6 +156,64 @@ REFLECTION_VECTOR_STORE_COLLECTION=reflection_memory
 DISABLE_REFLECTION_MEMORY=true  # default: true
 ```
 
+## Security Configuration
+
+Cipher implementuje komplexní bezpečnostní systém s JWT autentizací pro WebSocket připojení a API validací.
+
+### JWT Authentication
+
+```bash
+# JWT Configuration (optional - secure defaults if not set)
+CIPHER_JWT_SECRET=your-secure-secret-key-here
+CIPHER_JWT_EXPIRY=24h
+CIPHER_JWT_ISSUER=cipher-websocket
+```
+
+**JWT Environment Variables:**
+
+- `CIPHER_JWT_SECRET` - Secret key pro podepisování JWT tokenů. Pokud není nastaven, automaticky se vygeneruje bezpečný klíč.
+- `CIPHER_JWT_EXPIRY` - Výchozí doba platnosti tokenů (formát: 1h, 30m, 7d). Výchozí: 24h
+- `CIPHER_JWT_ISSUER` - Identifikace vydavatele tokenů. Výchozí: "cipher-websocket"
+
+**Bezpečnostní doporučení:**
+- Pro produkční použití vždy nastavte vlastní `CIPHER_JWT_SECRET`
+- Používejte silný, náhodný klíč o délce alespoň 64 znaků
+- Pravidelně rotujte JWT secret v produkci
+- Nastavte rozumnou dobu platnosti tokenů podle vašich bezpečnostních požadavků
+
+### API Validation
+
+Všechny API endpointy používají middleware pro validaci a zabezpečení:
+
+**Automatické funkce:**
+- **Input validation** - kontrola typu dat, délky a formátu pro všechny parametry
+- **XSS protection** - sanitizace všech textových vstupů
+- **Session validation** - ověření formátu session ID
+- **URL validation** - kontrola správného formátu URL v webhook a config endpointech
+- **File path security** - ochrana proti path traversal útokům
+
+**Chráněné endpointy:**
+- Vector API (`/api/vector/*`)
+- Memory API (`/api/memory/*`)
+- Search API (`/api/search/*`)
+- Webhook API (`/api/webhook/*`)
+- Config API (`/api/config/*`)
+- Monitoring API (`/api/monitoring/*`)
+
+### WebSocket Authentication
+
+WebSocket připojení podporují JWT autentizaci pomocí 3 metod:
+
+1. **Query parameter**: `ws://localhost:3001?token=JWT_TOKEN`
+2. **Authorization header**: `Authorization: Bearer JWT_TOKEN`
+3. **WebSocket subprotocol**: `Sec-WebSocket-Protocol: cipher-jwt-JWT_TOKEN`
+
+**Permissions systém:**
+- `read` - čtení WebSocket zpráv a eventů
+- `write` - odesílání zpráv přes WebSocket
+- `admin` - administrativní přístup ke správě připojení
+- `monitor` - přístup k monitoring a metrics eventům
+
 ## Related Documentation
 
 - [LLM Providers](./llm-providers.md) - Detailed configuration for all supported LLM providers
