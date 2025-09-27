@@ -52,6 +52,18 @@ export function createSearchRoutes(_agent: MemAgent): Router {
 		try {
 			const { q, sessionId, role, limit = 50, offset = 0 } = req.query;
 
+			// Type guard for q parameter
+			if (!q || typeof q !== 'string') {
+				return errorResponse(
+					res,
+					ERROR_CODES.VALIDATION_ERROR,
+					'Query parameter q is required and must be a string',
+					400,
+					undefined,
+					req.requestId
+				);
+			}
+
 			logger.info('Message search requested', {
 				requestId: req.requestId,
 				query: q,
@@ -156,6 +168,18 @@ export function createSearchRoutes(_agent: MemAgent): Router {
 	router.get('/sessions', validateSearchSessions, async (req: Request, res: Response) => {
 		try {
 			const { q } = req.query;
+
+			// Type guard for q parameter
+			if (!q || typeof q !== 'string') {
+				return errorResponse(
+					res,
+					ERROR_CODES.VALIDATION_ERROR,
+					'Query parameter q is required and must be a string',
+					400,
+					undefined,
+					req.requestId
+				);
+			}
 
 			logger.info('Session search requested', {
 				requestId: req.requestId,

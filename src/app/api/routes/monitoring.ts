@@ -554,6 +554,12 @@ router.delete('/alerts/rules/:ruleId', validateRuleId, (req: Request, res: Respo
 	try {
 		const { ruleId } = req.params;
 
+		if (!ruleId) {
+			return res.status(400).json({
+				error: 'Rule ID is required'
+			});
+		}
+
 		const success = alertManager.removeRule(ruleId);
 
 		if (success) {
@@ -586,6 +592,12 @@ router.put('/alerts/rules/:ruleId/toggle', validateRuleId, validateToggleRule, (
 	try {
 		const { ruleId } = req.params;
 		const { enabled } = req.body;
+
+		if (!ruleId) {
+			return res.status(400).json({
+				error: 'Rule ID is required'
+			});
+		}
 
 		const success = alertManager.toggleRule(ruleId, enabled);
 
@@ -678,6 +690,12 @@ router.get('/dashboard/configs/:configId', validateConfigId, async (req: Request
 	try {
 		const { configId } = req.params;
 
+		if (!configId) {
+			return res.status(400).json({
+				error: 'Config ID is required'
+			});
+		}
+
 		const config = await dashboardManager.getDashboardConfig(configId);
 
 		if (config) {
@@ -728,6 +746,12 @@ router.post('/dashboard/configs', async (req: Request, res: Response) => {
 router.get('/dashboard/configs/:configId/export', validateConfigId, async (req: Request, res: Response) => {
 	try {
 		const { configId } = req.params;
+
+		if (!configId) {
+			return res.status(400).json({
+				error: 'Config ID is required'
+			});
+		}
 
 		const config = await dashboardManager.exportDashboardConfig(configId);
 

@@ -54,7 +54,7 @@ export class WebSocketJWTAuth {
 			expiresIn: this.tokenExpiry,
 			issuer: this.issuer,
 			algorithm: 'HS256',
-		});
+		} as jwt.SignOptions);
 	}
 
 	/**
@@ -130,9 +130,15 @@ export class WebSocketJWTAuth {
 
 		// Enhance WebSocket with authentication data
 		const authenticatedWs = ws as AuthenticatedWebSocket;
-		authenticatedWs.sessionId = payload.sessionId;
-		authenticatedWs.userId = payload.userId;
-		authenticatedWs.clientId = payload.clientId;
+		if (payload.sessionId !== undefined) {
+			authenticatedWs.sessionId = payload.sessionId;
+		}
+		if (payload.userId !== undefined) {
+			authenticatedWs.userId = payload.userId;
+		}
+		if (payload.clientId !== undefined) {
+			authenticatedWs.clientId = payload.clientId;
+		}
 		authenticatedWs.permissions = payload.permissions || [];
 		authenticatedWs.isAuthenticated = true;
 
@@ -181,12 +187,19 @@ export class WebSocketJWTAuth {
 	generateClientToken(sessionId?: string, userId?: string, permissions: string[] = ['read', 'write']): string {
 		const clientId = crypto.randomUUID();
 
-		return this.generateToken({
-			sessionId,
-			userId,
+		const tokenPayload: Omit<JWTPayload, 'iat' | 'exp'> = {
 			clientId,
 			permissions,
-		});
+		};
+
+		if (sessionId !== undefined) {
+			tokenPayload.sessionId = sessionId;
+		}
+		if (userId !== undefined) {
+			tokenPayload.userId = userId;
+		}
+
+		return this.generateToken(tokenPayload);
 	}
 
 	/**

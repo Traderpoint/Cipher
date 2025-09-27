@@ -58,7 +58,7 @@ const envSchema = z.object({
 	STORAGE_DATABASE_SSL: z.boolean().default(false),
 	// Vector Storage Configuration
 	VECTOR_STORE_TYPE: z
-		.enum(['qdrant', 'milvus', 'chroma', 'pinecone', 'in-memory', 'faiss'])
+		.enum(['qdrant', 'milvus', 'chroma', 'pinecone', 'in-memory', 'faiss', 'redis'])
 		.default('in-memory'),
 	VECTOR_STORE_HOST: z.string().optional(),
 	VECTOR_STORE_PORT: z.number().optional(),
@@ -145,6 +145,8 @@ const envSchema = z.object({
 	CIPHER_WORKSPACE_MODE: z.enum(['shared', 'isolated']).default('isolated'),
 	// MCP Aggregator Configuration
 	USE_ASK_CIPHER: z.boolean().default(false),
+	// Backup Configuration
+	BACKUP_ENABLED: z.boolean().default(true),
 });
 
 type EnvSchema = z.infer<typeof envSchema>;
@@ -408,6 +410,8 @@ export const env: EnvSchema = new Proxy({} as EnvSchema, {
 				return process.env.CIPHER_WORKSPACE_MODE || 'isolated';
 			case 'USE_ASK_CIPHER':
 				return process.env.USE_ASK_CIPHER === 'true';
+			case 'BACKUP_ENABLED':
+				return process.env.BACKUP_ENABLED === 'false' ? false : true;
 			default:
 				return process.env[prop];
 		}

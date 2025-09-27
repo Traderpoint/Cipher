@@ -103,6 +103,17 @@ export function createConfigRoutes(agent: MemAgent): Router {
 		try {
 			const { sessionId } = req.params;
 
+			if (!sessionId) {
+				return errorResponse(
+					res,
+					ERROR_CODES.VALIDATION_ERROR,
+					'Session ID is required',
+					400,
+					undefined,
+					req.requestId
+				);
+			}
+
 			logger.info('Getting session-specific configuration', {
 				requestId: req.requestId,
 				sessionId,

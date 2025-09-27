@@ -3,6 +3,7 @@ import { MemAgent } from '@core/brain/memAgent/index.js';
 import { successResponse, errorResponse, ERROR_CODES } from '../utils/response.js';
 import { logger } from '@core/logger/index.js';
 import { randomUUID } from 'crypto';
+import { validateWebhookId } from '../middleware/validation.js';
 
 // Simple in-memory webhook storage (in production, this should be persistent)
 interface WebhookData {
@@ -147,6 +148,16 @@ export function createWebhookRoutes(_agent: MemAgent): Router {
 	router.get('/:webhookId', validateWebhookId, async (req: Request, res: Response) => {
 		try {
 			const { webhookId } = req.params;
+			if (!webhookId) {
+				return errorResponse(
+					res,
+					ERROR_CODES.VALIDATION_ERROR,
+					'Webhook ID is required',
+					400,
+					undefined,
+					req.requestId
+				);
+			}
 
 			const webhook = webhooks.get(webhookId);
 			if (!webhook) {
@@ -198,6 +209,16 @@ export function createWebhookRoutes(_agent: MemAgent): Router {
 	router.delete('/:webhookId', validateWebhookId, async (req: Request, res: Response) => {
 		try {
 			const { webhookId } = req.params;
+			if (!webhookId) {
+				return errorResponse(
+					res,
+					ERROR_CODES.VALIDATION_ERROR,
+					'Webhook ID is required',
+					400,
+					undefined,
+					req.requestId
+				);
+			}
 
 			const webhook = webhooks.get(webhookId);
 			if (!webhook) {
@@ -252,6 +273,16 @@ export function createWebhookRoutes(_agent: MemAgent): Router {
 	router.post('/:webhookId/test', validateWebhookId, async (req: Request, res: Response) => {
 		try {
 			const { webhookId } = req.params;
+			if (!webhookId) {
+				return errorResponse(
+					res,
+					ERROR_CODES.VALIDATION_ERROR,
+					'Webhook ID is required',
+					400,
+					undefined,
+					req.requestId
+				);
+			}
 
 			const webhook = webhooks.get(webhookId);
 			if (!webhook) {
