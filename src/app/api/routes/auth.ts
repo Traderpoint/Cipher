@@ -5,7 +5,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { body, param } from 'express-validator';
+import { body } from 'express-validator';
 import { successResponse, errorResponse, ERROR_CODES } from '../utils/response.js';
 import { logger } from '@core/logger/index.js';
 import { generateWebSocketToken } from '../websocket/jwt-auth.js';

@@ -1332,7 +1332,7 @@ export class CommandParser {
 			usage: '/tokens [stats|reset|toggle|report]',
 			aliases: ['tok'],
 			category: 'system',
-			handler: async (args: string[], agent: MemAgent) => {
+			handler: async (args: string[], _agent: MemAgent) => {
 				try {
 					const tokenTracker = getTokenTracker();
 					const subcommand = args[0] || 'stats';
@@ -1351,10 +1351,11 @@ export class CommandParser {
 							tokenTracker.reset();
 							break;
 						case 'toggle':
-						case 't':
+						case 't': {
 							const enabled = args[1] === 'on' ? true : args[1] === 'off' ? false : undefined;
 							tokenTracker.toggleDisplay(enabled);
 							break;
+						}
 						case 'report':
 							console.log(tokenTracker.generateReport());
 							break;

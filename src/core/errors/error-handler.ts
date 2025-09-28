@@ -11,13 +11,15 @@ export class AppError extends Error {
 		super(message);
 		this.statusCode = statusCode;
 		this.isOperational = isOperational;
-		this.errorCode = errorCode;
+		if (errorCode !== undefined) {
+			this.errorCode = errorCode;
+		}
 		Error.captureStackTrace(this, this.constructor);
 	}
 }
 
 export class ValidationError extends AppError {
-	constructor(message: string, details?: any) {
+	constructor(message: string, _details?: any) {
 		super(message, 400, 'VALIDATION_ERROR');
 		this.name = 'ValidationError';
 	}
@@ -65,7 +67,7 @@ export class ServiceUnavailableError extends AppError {
 	}
 }
 
-export const globalErrorHandler = (err: Error, req: Request, res: Response, next: NextFunction): void => {
+export const globalErrorHandler = (err: Error, req: Request, res: Response, _next: NextFunction): void => {
 	let statusCode = 500;
 	let errorCode = 'INTERNAL_SERVER_ERROR';
 	let message = 'Internal server error';
@@ -90,13 +92,19 @@ export const globalErrorHandler = (err: Error, req: Request, res: Response, next
 	});
 
 	// Track error in monitoring
-	errorTracker.trackError(err, 'api', {
+	const context: Record<string, any> = {
 		statusCode,
 		requestId: req.requestId,
 		endpoint: `${req.method} ${req.route?.path || req.url}`,
-		userAgent: req.get('User-Agent'),
-		ip: req.ip,
-	});
+	};
+	const userAgent = req.get('User-Agent');
+	if (userAgent) {
+		context.userAgent = userAgent;
+	}
+	if (req.ip) {
+		context.ip = req.ip;
+	}
+	errorTracker.trackError(err, 'api', context);
 
 	// Send error response
 	res.status(statusCode).json({
@@ -115,7 +123,7 @@ export const asyncHandler = (fn: Function) => (req: Request, res: Response, next
 	Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-export const notFoundHandler = (req: Request, res: Response): void => {
+export const notFoundHandler = (req: Request, _res: Response): void => {
 	throw new NotFoundError(`Route ${req.method} ${req.url} not found`);
 };
 

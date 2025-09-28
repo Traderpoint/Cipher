@@ -28,7 +28,7 @@ const SECRET_PATTERNS = [
 
   // AWS Access Keys
   { name: 'AWS Access Key', pattern: /AKIA[0-9A-Z]{16}/, severity: 'HIGH' },
-  { name: 'AWS Secret Key', pattern: /[0-9a-zA-Z\/+]{40}/, severity: 'MEDIUM' },
+  { name: 'AWS Secret Key', pattern: /[0-9a-zA-Z/+]{40}/, severity: 'MEDIUM' },
 
   // Database connection strings
   { name: 'PostgreSQL URL', pattern: /postgresql:\/\/.*:.*@/, severity: 'HIGH' },

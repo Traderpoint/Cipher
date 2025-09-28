@@ -5,7 +5,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { WebSocketJWTAuth, type JWTPayload, type AuthenticatedWebSocket } from './jwt-auth.js';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 
 // Mock WebSocket for testing
 class MockWebSocket {

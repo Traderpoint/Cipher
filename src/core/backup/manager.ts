@@ -18,16 +18,14 @@ import {
   BackupConfig,
   BackupJob,
   BackupMetadata,
-  BackupStatus,
   BackupStorageType,
   StorageBackupConfig,
   RestoreOptions,
   BackupSearchFilters,
   BackupStatistics,
   VerificationType,
-  BackupDestination,
 } from './types.js';
-import { createDefaultBackupConfig, loadBackupConfig, validateBackupConfig } from './config.js';
+import { createDefaultBackupConfig, validateBackupConfig } from './config.js';
 import { Logger } from '../logger/logger.js';
 import { MetricsCollector } from '../monitoring/metrics-collector.js';
 
@@ -471,7 +469,7 @@ export class BackupManager extends EventEmitter implements IBackupManager {
       }
 
       // Apply retention policy for each storage type
-      for (const [storageType, backups] of backupsByType) {
+      for (const [_storageType, backups] of backupsByType) {
         const sortedBackups = backups.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
 
         // Keep recent daily backups

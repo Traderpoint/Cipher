@@ -310,7 +310,7 @@ export abstract class BaseStorageBackupHandler implements IStorageBackupHandler 
   /**
    * Decompress a single file
    */
-  protected async decompressFile(inputPath: string, outputPath: string, compression: CompressionType): Promise<void> {
+  protected async decompressFile(inputPath: string, outputPath: string, _compression: CompressionType): Promise<void> {
     // Implementation would mirror compressFile but in reverse
     // For brevity, this is simplified
     const input = createReadStream(inputPath);
@@ -483,7 +483,7 @@ export abstract class BaseStorageBackupHandler implements IStorageBackupHandler 
       // Cleanup on error
       try {
         await fs.rm(tempDir, { recursive: true, force: true });
-      } catch (cleanupError) {
+      } catch (_cleanupError) {
         // Ignore cleanup errors
       }
 

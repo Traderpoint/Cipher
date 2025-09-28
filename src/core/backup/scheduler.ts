@@ -60,7 +60,9 @@ export class BackupScheduler extends EventEmitter {
   constructor(logger?: Logger, metricsCollector?: MetricsCollector) {
     super();
     this.logger = logger || new Logger({ level: 'info' });
-    this.metricsCollector = metricsCollector;
+    if (metricsCollector !== undefined) {
+      this.metricsCollector = metricsCollector;
+    }
   }
 
   /**
@@ -318,7 +320,7 @@ export class BackupScheduler extends EventEmitter {
       this.logger.info(`Enabled schedule: ${job.name} (${jobId})`);
     } else {
       job.cronJob.stop();
-      job.nextRun = undefined;
+      delete job.nextRun;
       this.logger.info(`Disabled schedule: ${job.name} (${jobId})`);
     }
 
@@ -453,7 +455,7 @@ export class BackupScheduler extends EventEmitter {
    * Clear all schedules
    */
   async clearAllSchedules(): Promise<void> {
-    for (const [jobId, job] of this.scheduledJobs) {
+    for (const [_jobId, job] of this.scheduledJobs) {
       job.cronJob.stop();
     }
 

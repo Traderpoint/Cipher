@@ -255,14 +255,14 @@ export class BackupVerificationEngine {
 
       for (const chunk of fileChunks) {
         const chunkResults = await Promise.all(
-          chunk.map(file => this.verifyFileChecksum(file, metadata.checksums[file]))
+          chunk.map(file => this.verifyFileChecksum(file, metadata.checksums[file] || ''))
         );
         fileResults.push(...chunkResults);
       }
     } else {
       // Verify checksums sequentially
       for (const file of metadata.files) {
-        const fileResult = await this.verifyFileChecksum(file, metadata.checksums[file]);
+        const fileResult = await this.verifyFileChecksum(file, metadata.checksums[file] || '');
         fileResults.push(fileResult);
       }
     }
@@ -553,11 +553,14 @@ export class BackupVerificationEngine {
           });
 
           child.on('close', (code) => {
-            resolve({
+            const result: { success: boolean; output: string; error?: string } = {
               success: code === 0,
               output: stdout,
-              error: code !== 0 ? stderr : undefined,
-            });
+            };
+            if (code !== 0) {
+              result.error = stderr;
+            }
+            resolve(result);
           });
 
           child.on('error', (error) => {
@@ -606,7 +609,7 @@ export class BackupVerificationEngine {
           files.push(...subFiles);
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // Directory might not exist or be accessible
     }
 
@@ -660,7 +663,7 @@ export async function quickVerifyBackup(
 
     return results.every(result => result.passed);
 
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }
@@ -696,11 +699,14 @@ export async function comprehensiveVerifyBackup(
       reportPath = await verifier.saveVerificationReport(report);
     }
 
-    return {
+    const result: { passed: boolean; report: Record<string, any>; reportPath?: string } = {
       passed,
       report,
-      reportPath,
     };
+    if (reportPath) {
+      result.reportPath = reportPath;
+    }
+    return result;
 
   } catch (error) {
     return {

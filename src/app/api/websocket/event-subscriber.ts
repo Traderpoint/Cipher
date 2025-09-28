@@ -567,7 +567,7 @@ export class WebSocketEventSubscriber {
 		}
 
 		// Clean up all session-specific abort controllers
-		this.sessionAbortControllers.forEach((controller, sessionId) => {
+		this.sessionAbortControllers.forEach((controller, _sessionId) => {
 			controller.abort();
 		});
 		this.sessionAbortControllers.clear();

@@ -110,7 +110,7 @@ export class PostgresConnectionPool extends BaseConnectionPool<PoolClient> {
 		}
 	}
 
-	async drain(): Promise<void> {
+	override async drain(): Promise<void> {
 		await super.drain();
 		await this.pgPool.end();
 	}

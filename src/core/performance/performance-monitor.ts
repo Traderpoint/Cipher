@@ -104,12 +104,12 @@ export class PerformanceMonitor {
 
     return {
       totalRequests: operationMetrics.length,
-      avgDuration: durations.reduce((sum, d) => sum + d, 0) / durations.length,
-      minDuration: durations[0],
-      maxDuration: durations[durations.length - 1],
-      p95Duration: durations[Math.floor(durations.length * 0.95)],
-      p99Duration: durations[Math.floor(durations.length * 0.99)],
-      errorRate: errors.length / operationMetrics.length,
+      avgDuration: durations.length > 0 ? durations.reduce((sum, d) => sum + d, 0) / durations.length : 0,
+      minDuration: durations.length > 0 ? durations[0]! : 0,
+      maxDuration: durations.length > 0 ? durations[durations.length - 1]! : 0,
+      p95Duration: durations.length > 0 ? durations[Math.floor(durations.length * 0.95)]! : 0,
+      p99Duration: durations.length > 0 ? durations[Math.floor(durations.length * 0.99)]! : 0,
+      errorRate: operationMetrics.length > 0 ? errors.length / operationMetrics.length : 0,
       throughput: recentMetrics.length // requests per minute
     };
   }
@@ -309,7 +309,9 @@ export class PerformanceTracker {
   ) {
     this.startTime = Date.now();
     this.operation = operation;
-    this.metadata = metadata;
+    if (metadata !== undefined) {
+      this.metadata = metadata;
+    }
     this.monitor = monitor;
   }
 
@@ -330,14 +332,19 @@ export class PerformanceTracker {
   private complete(success: boolean, errorMessage?: string): void {
     const duration = Date.now() - this.startTime;
 
-    this.monitor.recordOperation({
+    const metrics: PerformanceMetrics = {
       operation: this.operation,
       duration,
       timestamp: this.startTime,
-      metadata: this.metadata,
       success,
-      errorMessage
-    });
+    };
+    if (this.metadata !== undefined) {
+      metrics.metadata = this.metadata;
+    }
+    if (errorMessage !== undefined) {
+      metrics.errorMessage = errorMessage;
+    }
+    this.monitor.recordOperation(metrics);
   }
 }
 

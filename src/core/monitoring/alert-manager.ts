@@ -260,26 +260,30 @@ export class AlertManager extends EventEmitter {
 			case 'memory_percentage':
 				return metrics.system.memory.percentage;
 
-			case 'error_rate':
+			case 'error_rate': {
 				const totalRequests = metrics.api.totalRequests;
 				const totalErrors = Object.values(errorStats.errorsByType).reduce((sum: number, count: any) => sum + count, 0);
 				return totalRequests > 0 ? totalErrors / totalRequests : 0;
+			}
 
-			case 'llm_avg_response_time':
+			case 'llm_avg_response_time': {
 				const llmMetrics = Object.values(metrics.llm);
 				if (llmMetrics.length === 0) return null;
 				const avgResponseTime = llmMetrics.reduce((sum: number, llm: any) => sum + llm.averageResponseTime, 0) / llmMetrics.length;
 				return avgResponseTime;
+			}
 
-			case 'websocket_error_rate':
+			case 'websocket_error_rate': {
 				const totalConnections = metrics.websocket.totalConnections || 0;
 				const connectionErrors = metrics.websocket.connectionErrors || 0;
 				return totalConnections > 0 ? connectionErrors / totalConnections : 0;
+			}
 
-			case 'api_avg_response_time':
+			case 'api_avg_response_time': {
 				const responseTimeValues = Object.values(metrics.api.averageResponseTime || {});
 				if (responseTimeValues.length === 0) return null;
 				return responseTimeValues.reduce((sum: number, time: any) => sum + time, 0) / responseTimeValues.length;
+			}
 
 			default:
 				logger.warn('Unknown alert condition', { condition });

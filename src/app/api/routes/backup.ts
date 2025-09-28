@@ -9,12 +9,9 @@ import { Router, Request, Response } from 'express';
 import {
   BackupManager,
   BackupScheduler,
-  BackupConfig,
   BackupStorageType,
   BackupSearchFilters,
   RestoreOptions,
-  StorageBackupConfig,
-  BackupSchedule,
   VerificationType,
 } from '../../../core/backup/index.js';
 import { createLogger } from '../../../core/logger/logger.js';

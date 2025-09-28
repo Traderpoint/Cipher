@@ -107,7 +107,7 @@ export class Neo4jPoolFactory implements PoolFactory<Driver> {
 				]);
 
 				const isValid = result && result.records && result.records.length > 0 &&
-					result.records[0].get('health_check').toNumber() === 1;
+					result.records[0]?.get('health_check').toNumber() === 1;
 
 				if (!isValid) {
 					this.logger.warn('Neo4j health check returned unexpected result:', result);

@@ -8,10 +8,7 @@
 import { EventEmitter } from 'events';
 import {
   IBackupManager,
-  BackupSchedule,
   BackupJob,
-  BackupMetadata,
-  BackupStatistics,
   BackupStorageType,
 } from './types.js';
 import { Logger } from '../logger/logger.js';
@@ -541,7 +538,9 @@ export class BackupMonitoringIntegration extends EventEmitter {
     const storageMetrics = this.metrics.storageTypeMetrics[job.storageType];
     storageMetrics.backupsCount++;
     storageMetrics.totalSize += job.metadata.size || 0;
-    storageMetrics.lastBackupTime = job.metadata.endTime;
+    if (job.metadata.endTime) {
+      storageMetrics.lastBackupTime = job.metadata.endTime;
+    }
 
     if (this.metricsCollector) {
       this.metricsCollector.incrementCounter('backup_completed_total', {
@@ -698,7 +697,7 @@ export class BackupMonitoringIntegration extends EventEmitter {
         // Unix-like systems
         const output = execSync('df -BG . | tail -1').toString();
         const parts = output.trim().split(/\s+/);
-        const available = parseInt(parts[3].replace('G', ''), 10);
+        const available = parts[3] ? parseInt(parts[3].replace('G', ''), 10) : 0;
         return available;
       }
     } catch {

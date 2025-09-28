@@ -25,8 +25,8 @@ function getTypeScriptErrors() {
   try {
     execSync('npm run typecheck', { stdio: 'pipe' });
     return [];
-  } catch (err) {
-    const output = err.stdout.toString() + err.stderr.toString();
+  } catch (_err) {
+    const output = _err.stdout.toString() + _err.stderr.toString();
     const errorLines = output.split('\n')
       .filter(line => line.includes('error TS'))
       .map(line => {
@@ -84,7 +84,7 @@ function fixNoImplicitReturns(filePath, lineNumber) {
       fs.writeFileSync(filePath, lines.join('\n'));
       return true;
     }
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
   return false;
@@ -114,7 +114,7 @@ function fixUndefinedPropertyAccess(filePath, lineNumber, message) {
         return true;
       }
     }
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
   return false;
@@ -145,7 +145,7 @@ function fixPossiblyUndefined(filePath, lineNumber, message) {
         }
       }
     }
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
   return false;
@@ -172,7 +172,7 @@ function fixStringUndefinedAssignment(filePath, lineNumber, message) {
         return true;
       }
     }
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
   return false;

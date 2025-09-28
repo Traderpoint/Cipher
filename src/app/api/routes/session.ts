@@ -706,8 +706,6 @@ export function createSessionRoutes(agent: MemAgent): Router {
 		try {
 			logger.info('Getting session performance stats', { requestId: req.requestId });
 
-			const sessionManager = agent.sessionManager;
-
 			// Get basic session statistics
 			const sessionIds = await agent.listSessions();
 			let totalSessions = sessionIds.length;

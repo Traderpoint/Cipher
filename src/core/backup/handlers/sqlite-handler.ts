@@ -9,7 +9,6 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 // import { Database } from 'sqlite3';
 type Database = any; // Fallback when sqlite3 is not available
-import { promisify } from 'util';
 import {
   StorageBackupConfig,
   BackupMetadata,
@@ -328,8 +327,8 @@ export class SqliteBackupHandler extends BaseStorageBackupHandler {
   /**
    * Open SQLite database connection
    */
-  private async openDatabase(dbPath: string): Promise<Database> {
-    return new Promise((resolve, reject) => {
+  private async openDatabase(_dbPath: string): Promise<Database> {
+    return new Promise((resolve, _reject) => {
       // SQLite3 not available, using mock implementation
       const db = { close: (cb: any) => cb(), get: (sql: string, cb: any) => cb(null, {}), all: (sql: string, cb: any) => cb(null, []), run: (sql: string, cb: any) => cb() } as any;
       resolve(db);
@@ -599,8 +598,6 @@ export class SqliteBackupHandler extends BaseStorageBackupHandler {
 
     if (hasSqlite3) {
       // Use sqlite3 command line tool
-      await this.executeCommand('sqlite3', [dbPath], { timeout: 300000 });
-      const dumpContent = await fs.readFile(dumpPath, 'utf-8');
       await this.executeCommand('sqlite3', [dbPath], { timeout: 300000 });
     } else {
       // Use programmatic approach

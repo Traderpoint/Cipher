@@ -5,9 +5,8 @@
  * Připraví pre-commit hooks pro všechny vývojáře
  */
 
-const { execSync, exec } = require('child_process');
+const { execSync } = require('child_process');
 const fs = require('fs');
-const path = require('path');
 
 function log(message) {
   console.log(`🔧 ${message}`);

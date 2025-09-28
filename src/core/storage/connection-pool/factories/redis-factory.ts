@@ -195,10 +195,6 @@ export class RedisPoolFactory implements PoolFactory<Redis> {
 			family: config.family || 4, // Force IPv4 to avoid IPv6 issues
 			db: config.database || 0,
 
-			// Authentication
-			username: config.username,
-			password: config.password,
-
 			// Timeouts
 			connectTimeout: config.connectTimeout || config.acquireTimeoutMs || 10000,
 			commandTimeout: config.commandTimeout || 5000,
@@ -212,6 +208,14 @@ export class RedisPoolFactory implements PoolFactory<Redis> {
 			// Keep-alive settings
 			keepAlive: config.keepAlive !== undefined ? config.keepAlive : 30000,
 		};
+
+		// Add authentication if provided
+		if (config.username) {
+			options.username = config.username;
+		}
+		if (config.password) {
+			options.password = config.password;
+		}
 
 		// Handle connection URL if provided
 		if (config.url) {

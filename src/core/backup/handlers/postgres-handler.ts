@@ -6,7 +6,6 @@
  */
 
 import * as path from 'path';
-import * as fs from 'fs/promises';
 import { Client } from 'pg';
 import {
   StorageBackupConfig,
@@ -197,12 +196,6 @@ export class PostgreSQLBackupHandler extends BaseStorageBackupHandler {
       if (backupConfig.jobs && format === 'directory') {
         dumpArgs.push('--jobs', backupConfig.jobs.toString());
       }
-
-      // Set environment variables for authentication
-      const env = {
-        ...process.env,
-        PGPASSWORD: connectionConfig.password,
-      };
 
       // Execute pg_dump
       this.logger.info('Starting PostgreSQL backup with pg_dump');
@@ -417,12 +410,6 @@ export class PostgreSQLBackupHandler extends BaseStorageBackupHandler {
 
     restoreArgs.push(backupFile);
 
-    // Set environment variables for authentication
-    const env = {
-      ...process.env,
-      PGPASSWORD: config.password,
-    };
-
     // Execute pg_restore
     this.logger.info('Restoring PostgreSQL database with pg_restore');
     await this.executeCommand('pg_restore', restoreArgs, {
@@ -458,12 +445,6 @@ export class PostgreSQLBackupHandler extends BaseStorageBackupHandler {
       '--no-password',
     ];
 
-    // Set environment variables for authentication
-    const env = {
-      ...process.env,
-      PGPASSWORD: config.password,
-    };
-
     // Execute psql
     this.logger.info('Restoring PostgreSQL database with psql');
     await this.executeCommand('psql', psqlArgs, {
@@ -492,12 +473,6 @@ export class PostgreSQLBackupHandler extends BaseStorageBackupHandler {
       '--file', globalsFile,
       '--no-password',
     ];
-
-    // Set environment variables for authentication
-    const env = {
-      ...process.env,
-      PGPASSWORD: globalsConfig.password,
-    };
 
     this.logger.info('Restoring PostgreSQL globals');
     await this.executeCommand('psql', psqlArgs, { timeout: 300000 });

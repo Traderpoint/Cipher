@@ -17,7 +17,7 @@ export const WebSearchConfigSchema = z.discriminatedUnion('engine', [DuckDuckGoS
 export type WebSearchConfig = z.infer<typeof WebSearchConfigSchema>;
 
 // Input schema for the web search tool
-const WebSearchInputSchema = z.object({
+export const WebSearchInputSchema = z.object({
 	search_term: z
 		.string()
 		.describe(

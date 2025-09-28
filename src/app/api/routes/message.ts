@@ -243,7 +243,7 @@ export function createMessageRoutes(agent: MemAgent): Router {
 
 					// Now remove and recreate the session
 					await agent.removeSession(sessionId);
-					const newSession = await agent.createSession(sessionId);
+					await agent.createSession(sessionId);
 
 					// Switch back to the reset session if it was current
 					if (tempSessionId && currentSessionId === sessionId) {

@@ -136,7 +136,7 @@ export class FileSystemBackupHandler extends BaseStorageBackupHandler {
         try {
           const size = await this.getDirectorySize(targetPath);
           totalSize += size;
-        } catch (error) {
+        } catch (_error) {
           // Path might not exist, continue
         }
       }
@@ -357,7 +357,7 @@ export class FileSystemBackupHandler extends BaseStorageBackupHandler {
     paths: string[],
     excludePatterns: string[],
     archivePath: string,
-    config: any
+    _config: any
   ): Promise<void> {
     const args = ['-r', archivePath];
 
@@ -380,7 +380,7 @@ export class FileSystemBackupHandler extends BaseStorageBackupHandler {
     paths: string[],
     excludePatterns: string[],
     destination: string,
-    config: any
+    _config: any
   ): Promise<void> {
     const archiveDir = path.join(destination, 'manual_archive');
     await fs.mkdir(archiveDir, { recursive: true });
@@ -410,7 +410,7 @@ export class FileSystemBackupHandler extends BaseStorageBackupHandler {
     paths: string[],
     excludePatterns: string[],
     destination: string,
-    config: any
+    _config: any
   ): Promise<string[]> {
     const backupFiles: string[] = [];
     const copyDir = path.join(destination, 'files');

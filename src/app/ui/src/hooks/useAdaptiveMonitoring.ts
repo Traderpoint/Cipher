@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 interface HealthStatus {
   status: 'healthy' | 'warning' | 'critical';
@@ -63,7 +63,7 @@ export const useAdaptiveMonitoring = () => {
           ? REFRESH_INTERVALS.critical
           : REFRESH_INTERVALS.warning;
 
-      case 'healthy':
+      case 'healthy': {
         // Při healthy state, pomalé updates
         const timeSinceLastSuccess = Date.now() - lastSuccessfulUpdate.getTime();
 
@@ -73,6 +73,7 @@ export const useAdaptiveMonitoring = () => {
         }
 
         return config.baseInterval;
+      }
 
       default:
         return REFRESH_INTERVALS.healthy;

@@ -77,7 +77,6 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
       const info = await client.info();
       const configInfo = await client.config('GET', '*') as string[];
       const dbSize = await client.dbsize();
-      const memory = await client.memory('STATS');
 
       // Parse info string
       const infoLines = info.split('\r\n');
@@ -411,7 +410,7 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
   private async createAOFBackup(
     client: RedisType,
     destination: string,
-    backupConfig: any
+    _backupConfig: any
   ): Promise<string[]> {
     const backupFiles: string[] = [];
 
@@ -631,8 +630,8 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
    */
   private async restoreFromRDB(
     rdbFile: string,
-    client: RedisType,
-    options: RestoreOptions
+    _client: RedisType,
+    _options: RestoreOptions
   ): Promise<void> {
     // RDB restore typically requires Redis server restart
     // This is a simplified implementation that uses redis-cli if available
@@ -665,7 +664,7 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
   private async restoreFromAOF(
     aofFile: string,
     client: RedisType,
-    options: RestoreOptions
+    _options: RestoreOptions
   ): Promise<void> {
     // Read AOF file and replay commands
     const aofContent = await fs.readFile(aofFile, 'utf-8');
@@ -693,7 +692,7 @@ export class RedisBackupHandler extends BaseStorageBackupHandler {
   private async restoreFromKeyDump(
     keyDumpFile: string,
     client: RedisType,
-    options: RestoreOptions
+    _options: RestoreOptions
   ): Promise<void> {
     const dumpContent = await fs.readFile(keyDumpFile, 'utf-8');
     const dumpData = JSON.parse(dumpContent);

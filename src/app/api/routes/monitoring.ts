@@ -558,7 +558,7 @@ router.get('/health-check', (_req: Request, res: Response) => {
 		} else {
 			res.status(200).json(response);
 		}
-	} catch (error) {
+	} catch (_error) {
 		res.status(503).json({
 			status: 'critical',
 			error: 'Health check failed',

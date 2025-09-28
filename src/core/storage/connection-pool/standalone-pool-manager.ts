@@ -234,7 +234,7 @@ export abstract class StandaloneBaseConnectionPool<T> extends EventEmitter {
     // Stop reaper
     if (this.reapTimer) {
       clearInterval(this.reapTimer);
-      this.reapTimer = undefined;
+      delete this.reapTimer;
     }
 
     // Stop accepting new requests

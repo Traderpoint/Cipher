@@ -53,7 +53,7 @@ async function copyUIBuild(): Promise<void> {
 			console.log('Removing existing target directory...');
 			try {
 				await fs.remove(targetDir);
-			} catch (error) {
+			} catch (_error) {
 				console.log('Warning: Could not remove target directory completely, continuing...');
 				// Try to remove specific files instead of the whole directory
 				try {
@@ -61,7 +61,7 @@ async function copyUIBuild(): Promise<void> {
 					if (fs.existsSync(standaloneTargetPath)) {
 						await fs.emptyDir(standaloneTargetPath);
 					}
-				} catch (emptyError) {
+				} catch (_emptyError) {
 					console.log('Warning: Could not empty standalone directory, files may be locked');
 				}
 			}

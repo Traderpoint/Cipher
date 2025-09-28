@@ -104,13 +104,44 @@ export default [
 		},
 	},
 
-	// Node.js JavaScript specific config (for CommonJS files)
+	// CommonJS specific config
+	{
+		files: ['**/*.cjs'],
+		languageOptions: {
+			ecmaVersion: 2022,
+			sourceType: 'commonjs',
+			globals: {
+				// Node.js globals
+				console: 'readonly',
+				process: 'readonly',
+				require: 'readonly',
+				module: 'readonly',
+				exports: 'readonly',
+				__dirname: 'readonly',
+				__filename: 'readonly',
+				global: 'readonly',
+				Buffer: 'readonly',
+				setTimeout: 'readonly',
+				clearTimeout: 'readonly',
+				setInterval: 'readonly',
+				clearInterval: 'readonly',
+				setImmediate: 'readonly',
+				clearImmediate: 'readonly',
+			},
+		},
+		rules: {
+			'no-console': 'off',
+			'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+		},
+	},
+
+	// ES Module JavaScript specific config
 	{
 		files: ['**/*.js'],
 		ignores: ['**/*.config.js', 'eslint.config.js'],
 		languageOptions: {
 			ecmaVersion: 2022,
-			sourceType: 'commonjs',
+			sourceType: 'module',
 			globals: {
 				// Node.js globals
 				console: 'readonly',
